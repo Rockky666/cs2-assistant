@@ -1,0 +1,62 @@
+{
+  "name": "cs2-assistant",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Локальный справочник Counter-Strike 2",
+  "author": "Rockky666",
+  "license": "UNLICENSED",
+  "main": "dist-electron/main.cjs",
+  "scripts": {
+    "format": "prettier --write .",
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc --noEmit && vite build && node scripts/build-electron.mjs",
+    "start": "npm run build && electron .",
+    "test": "tsx --test tests/*.test.ts",
+    "test:desktop": "npm run build && node scripts/smoke-electron.mjs",
+    "check": "npm run test && npm run build",
+    "dist": "npm run check && node scripts/package.mjs",
+    "pack": "npm run build && node scripts/package.mjs --dir"
+  },
+  "build": {
+    "appId": "com.rockky.cs2assistant",
+    "productName": "CS2 Assistant",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "portable",
+      "signAndEditExecutable": false
+    },
+    "portable": {
+      "artifactName": "CS2-Assistant-${version}-portable.exe"
+    }
+  },
+  "dependencies": {
+    "lucide-react": "^1.56.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "electron": "^44.7.0",
+    "electron-builder": "^26.15.3",
+    "esbuild": "^0.28.2",
+    "playwright-core": "^1.64.0",
+    "prettier": "^3.9.10",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.4"
+  }
+}

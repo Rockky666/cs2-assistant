@@ -1,0 +1,8 @@
+node_modules
+dist
+dist-electron
+release
+output
+.playwright-cli
+package-lock.json
+docs/SPEC.md
