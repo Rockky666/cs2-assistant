@@ -32,9 +32,13 @@ else {
         path.join(app.getAppPath(), 'dist', themeLogos[settings.theme].replace(/\.svg$/, '.png')),
       );
       window.setBackgroundColor(
-        { 'dark-blue': '#0b1120', dark: '#0d0d0d', 'dark-red': '#480002', 'dark-green': '#233c00' }[
-          settings.theme
-        ],
+        {
+          'dark-blue': '#0b1120',
+          dark: '#0d0d0d',
+          'dark-red': '#480002',
+          orange: '#21150d',
+          light: '#f4f5f7',
+        }[settings.theme],
       );
     };
     let queue: Promise<unknown> = Promise.resolve();
@@ -118,7 +122,7 @@ else {
       height: 900,
       minWidth: 720,
       minHeight: 560,
-      backgroundColor: '#0b1120',
+      backgroundColor: '#0d0d0d',
       title: 'CS2 Assistant',
       autoHideMenuBar: true,
       webPreferences: {

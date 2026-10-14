@@ -1,10 +1,11 @@
 import type { MapId, Theme } from './model';
 const base = './assets/';
 export const themeLogos: Record<Theme, string> = {
-  'dark-blue': base + 'Logo-themes/Blue-dark-logo.svg',
+  'dark-blue': base + 'Logo-themes/Blue-logo.png',
   dark: base + 'Logo-themes/Dark-logo.svg',
-  'dark-red': base + 'Logo-themes/Red-dark-logo.svg',
-  'dark-green': base + 'Logo-themes/Green-dark-logo.svg',
+  'dark-red': base + 'Logo-themes/Red-logo.png',
+  orange: base + 'Logo-themes/Orange-logo.svg',
+  light: base + 'Logo-themes/Light-logo.svg',
 };
 export const mapAssets: Record<
   MapId,

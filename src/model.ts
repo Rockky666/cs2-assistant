@@ -18,7 +18,7 @@ export const categories: Category[] = [
   { id: 'he', name: 'HE-гранаты', kind: 'utility' },
   { id: 'flash', name: 'Флешки', kind: 'utility' },
   { id: 'molotov', name: 'Молотовы', kind: 'utility' },
-  { id: 'lineup', name: 'Лайнапы', kind: 'lineup' },
+  { id: 'lineup', name: 'Раскиды', kind: 'lineup' },
   { id: 'position', name: 'Позиции', kind: 'note' },
   { id: 'tactic', name: 'Тактики', kind: 'note' },
   { id: 'tip', name: 'Полезные фишки', kind: 'note' },
@@ -34,11 +34,11 @@ export const defaultThrows = [
   'Ctrl + left click',
 ];
 export const languages = ['ru', 'en', 'pt'] as const;
-export const themes = ['dark-blue', 'dark', 'dark-red', 'dark-green'] as const;
+export const themes = ['dark-blue', 'dark', 'dark-red', 'orange', 'light'] as const;
 export type Language = (typeof languages)[number];
 export type Theme = (typeof themes)[number];
 export const settingsSchema = z.object({ language: z.enum(languages), theme: z.enum(themes) });
-export const defaultSettings = () => ({ language: 'ru' as Language, theme: 'dark-blue' as Theme });
+export const defaultSettings = () => ({ language: 'ru' as Language, theme: 'dark' as Theme });
 const shortText = z.string().trim().min(1).max(200);
 export const imageSchema = z.object({
   id: z.string().uuid(),
@@ -91,17 +91,26 @@ const legacyCommand = z.object({
 export const commandSchema = legacyCommand.extend({ pinned: z.boolean() });
 export const crosshairSchema = z.object({
   id: z.string().uuid(),
-  code: z
-    .string()
-    .trim()
-    .regex(/^CSGO(?:-[A-Za-z0-9]{5}){5}$/),
+  code: z.string().trim().min(1).max(10000),
   image: imageSchema,
   pinned: z.boolean(),
   updatedAt: z.string().datetime(),
 });
+export const guideTopicSchema = z.object({ id: z.string().uuid(), title: shortText });
+export const guideArticleSchema = z.object({
+  id: z.string().uuid(),
+  topicId: z.string().uuid(),
+  title: shortText,
+  markdown: z.string().max(100000),
+  updatedAt: z.string().datetime(),
+});
+export type GuideTopic = z.infer<typeof guideTopicSchema>;
+export type GuideArticle = z.infer<typeof guideArticleSchema>;
 export const databaseSchema = z
   .object({
-    version: z.literal(2),
+    version: z.literal(3),
+    guideTopics: z.array(guideTopicSchema).max(200),
+    guideArticles: z.array(guideArticleSchema).max(10000),
     entries: z.array(entrySchema).max(10000),
     commands: z.array(commandSchema).max(10000),
     customThrows: z.array(shortText).max(100),
@@ -111,10 +120,17 @@ export const databaseSchema = z
   })
   .superRefine((db, ctx) => {
     const fail = (message: string) => ctx.addIssue({ code: 'custom', message });
-    const ids = [...db.entries, ...db.commands, ...db.crosshairs, ...db.customCategories].map(
-      (i) => i.id,
-    );
+    const ids = [
+      ...db.entries,
+      ...db.commands,
+      ...db.crosshairs,
+      ...db.customCategories,
+      ...db.guideTopics,
+      ...db.guideArticles,
+    ].map((i) => i.id);
     if (new Set(ids).size !== ids.length) fail('Duplicate IDs');
+    for (const article of db.guideArticles)
+      if (!db.guideTopics.some((t) => t.id === article.topicId)) fail('Unknown guide topic');
     const categoryNames = db.customCategories.map(
       (c) => `${c.mapId}:${c.name.toLocaleLowerCase()}`,
     );
@@ -163,7 +179,9 @@ export type CustomCategory = z.infer<typeof customCategorySchema>;
 export type Settings = z.infer<typeof settingsSchema>;
 export type Database = z.infer<typeof databaseSchema>;
 export const emptyDatabase = (): Database => ({
-  version: 2,
+  version: 3,
+  guideTopics: [],
+  guideArticles: [],
   entries: [],
   commands: [],
   customThrows: [],
@@ -182,6 +200,20 @@ export function parseDatabase(input: unknown): Database {
       entries: old.data.entries.map((e) => ({ ...e, tags: [], pinned: false, lineups: [] })),
       commands: old.data.commands.map((c) => ({ ...c, pinned: false })),
       customThrows: old.data.customThrows,
+    };
+  }
+  if (typeof input === 'object' && input !== null && 'version' in input && input.version === 2) {
+    const old = input as Record<string, unknown>;
+    const preferences = old.settings as Record<string, unknown> | undefined;
+    candidate = {
+      ...old,
+      version: 3,
+      guideTopics: [],
+      guideArticles: [],
+      settings: {
+        ...preferences,
+        theme: preferences?.theme === 'dark-green' ? 'dark' : preferences?.theme,
+      },
     };
   }
   const result = databaseSchema.safeParse(candidate);

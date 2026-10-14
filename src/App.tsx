@@ -13,13 +13,11 @@ import {
   FolderOpen,
   Grid2X2,
   HardDrive,
-  Layers3,
   Map as MapIcon,
   Plus,
   Search,
   Settings as SettingsIcon,
   ShieldCheck,
-  Target,
   Terminal,
   Trash2,
   Upload,
@@ -46,6 +44,8 @@ import Editor from './Editor';
 import { categoryName, errorText, translator, type MessageKey } from './messages';
 import { LanguageContext } from './i18n';
 import { backgroundFor, themeLogos } from './assets';
+import { Guide } from './Guide';
+import { LinksContext, parseInternalLink } from './links';
 import { APP_VERSION } from './app-info';
 
 type Route = {
@@ -57,14 +57,15 @@ type Route = {
     | 'detail'
     | 'editor'
     | 'commands'
-    | 'aim'
-    | 'peeks'
+    | 'guide'
     | 'crosshairs'
     | 'settings'
     | 'data';
   mapId?: MapId;
   categoryId?: string;
   entryId?: string;
+  topicId?: string;
+  articleId?: string;
 };
 function readRoute(): Route {
   try {
@@ -77,8 +78,7 @@ function readRoute(): Route {
         'list',
         'detail',
         'commands',
-        'aim',
-        'peeks',
+        'guide',
         'crosshairs',
         'settings',
         'data',
@@ -91,8 +91,7 @@ function readRoute(): Route {
 }
 const sideItems = [
   { page: 'maps', icon: MapIcon },
-  { page: 'aim', icon: Target },
-  { page: 'peeks', icon: Layers3 },
+  { page: 'guide', icon: BookOpen },
   { page: 'commands', icon: Terminal },
   { page: 'crosshairs', icon: CrosshairIcon },
 ] as const;
@@ -104,6 +103,11 @@ export default function App() {
   const [loadError, setLoadError] = useState<unknown>(null);
   const [route, setRoute] = useState<Route>(readRoute);
   const [search, setSearch] = useState('');
+  const historyIndex = useRef(Number(history.state?.cs2Index ?? 0));
+  const [historyPosition, setHistoryPosition] = useState(historyIndex.current);
+  const furthest = useRef(historyIndex.current);
+  const restoring = useRef(false);
+  const rejectingPop = useRef(false);
   const [draft, setDraft] = useState<Entry | null>(null);
   const [dirty, setDirty] = useState(false);
   const [toast, setToast] = useState('');
@@ -138,17 +142,47 @@ export default function App() {
     return () => clearTimeout(id);
   }, [toast]);
   useEffect(() => {
+    const snapshot = () => {
+      if (restoring.current || route.page === 'editor') return;
+      history.replaceState(
+        { cs2Index: historyIndex.current, route, search, scroll: window.scrollY },
+        '',
+        '#' + encodeURIComponent(JSON.stringify(route)),
+      );
+    };
+    snapshot();
+    window.addEventListener('scroll', snapshot, { passive: true });
     const listener = () => {
-      if (writing.current || (dirty && !window.confirm(t('unsaved')))) {
-        history.pushState(null, '', '#' + encodeURIComponent(JSON.stringify(route)));
+      if (rejectingPop.current) {
+        rejectingPop.current = false;
         return;
       }
+      const state = history.state;
+      const index = Number(state?.cs2Index ?? 0);
+      if (writing.current || (dirty && !window.confirm(t('unsaved')))) {
+        const offset = historyIndex.current - index;
+        if (offset) {
+          rejectingPop.current = true;
+          history.go(offset);
+        }
+        return;
+      }
+      historyIndex.current = index;
+      setHistoryPosition(index);
       setDirty(false);
       setDraft(null);
       setCommand(null);
       setCrosshair(null);
-      setSearch('');
-      setRoute(readRoute());
+      setError(null);
+      restoring.current = true;
+      setSearch(state?.search ?? '');
+      setRoute(state?.route ?? readRoute());
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => {
+          window.scrollTo(0, state?.scroll ?? 0);
+          restoring.current = false;
+        }),
+      );
     };
     const unload = (event: BeforeUnloadEvent) => {
       if (dirty || writing.current) {
@@ -156,15 +190,24 @@ export default function App() {
         event.returnValue = '';
       }
     };
-    window.addEventListener('hashchange', listener);
+    window.addEventListener('popstate', listener);
     window.addEventListener('beforeunload', unload);
     return () => {
-      window.removeEventListener('hashchange', listener);
+      window.removeEventListener('scroll', snapshot);
+      window.removeEventListener('popstate', listener);
       window.removeEventListener('beforeunload', unload);
     };
-  }, [dirty, route, db.settings.language]);
+  }, [dirty, route, search, db.settings.language]);
   function navigate(next: Route, force = false) {
     if (writing.current || (!force && dirty && !window.confirm(t('unsaved')))) return;
+    if (route.page !== 'editor')
+      history.replaceState(
+        { cs2Index: historyIndex.current, route, search, scroll: window.scrollY },
+        '',
+      );
+    historyIndex.current++;
+    furthest.current = historyIndex.current;
+    setHistoryPosition(historyIndex.current);
     setDirty(false);
     setDraft(null);
     setCommand(null);
@@ -172,8 +215,35 @@ export default function App() {
     setSearch('');
     setError(null);
     setRoute(next);
-    history.pushState(null, '', '#' + encodeURIComponent(JSON.stringify(next)));
+    history.pushState(
+      { cs2Index: historyIndex.current, route: next, search: '', scroll: 0 },
+      '',
+      '#' + encodeURIComponent(JSON.stringify(next)),
+    );
     window.scrollTo(0, 0);
+  }
+  function openInternal(url: string) {
+    const link = parseInternalLink(url);
+    if (!link) return;
+    if (link.kind === 'material') {
+      const entry = db.entries.find((e) => e.id === link.id);
+      if (entry) {
+        navigate({
+          page: 'detail',
+          mapId: entry.mapId,
+          categoryId: entry.categoryId,
+          entryId: entry.id,
+        });
+        return;
+      }
+    } else {
+      const article = db.guideArticles.find((a) => a.id === link.id);
+      if (article) {
+        navigate({ page: 'guide', topicId: article.topicId, articleId: article.id });
+        return;
+      }
+    }
+    setToast(t('missingLink'));
   }
   function edit(entry: Entry) {
     if (writing.current) return;
@@ -761,245 +831,258 @@ export default function App() {
       );
     if (route.page === 'data')
       return <Backups db={db} busy={busy} backup={(action) => void backup(action)} />;
-    if (route.page === 'aim' || route.page === 'peeks')
+    if (route.page === 'guide')
       return (
-        <>
-          <div className="section-heading">
-            <div>
-              <span className="eyebrow">{t('library')}</span>
-              <h1>{t(route.page)}</h1>
-            </div>
-            <span className="count-badge">{t('soon')}</span>
-          </div>
-          {empty('emptySection', 'emptySectionHint')}
-        </>
+        <Guide
+          key={route.topicId + ':' + route.articleId + ':' + historyPosition}
+          db={db}
+          topicId={route.topicId}
+          articleId={route.articleId}
+          busy={busy}
+          mutate={mutate}
+          dirty={setDirty}
+          navigate={(topicId, articleId, force) =>
+            navigate({ page: 'guide', topicId, articleId }, force)
+          }
+        />
       );
     return empty('notFound', 'returnToMaps');
   }
   return (
     <LanguageContext.Provider value={db.settings.language}>
-      <div className="app-shell">
-        <aside className="sidebar">
-          <button className="brand" onClick={() => navigate({ page: 'maps' })}>
-            <span className="brand-mark">
-              <img src={themeLogos[db.settings.theme]} alt="CS2 Assistant" />
-            </span>
-            <span>
-              CS2<span className="brand-subtitle">ASSISTANT</span>
-            </span>
-            <span className="version">02</span>
-          </button>
-          <div className="nav-caption">{t('yourGuide')}</div>
-          <nav aria-label={t('navigation')}>
-            {sideItems.map((item) => (
-              <button
-                key={item.page}
-                aria-label={t(item.page)}
-                title={t(item.page)}
-                className={`nav-item ${activePage === item.page ? 'active' : ''}`}
-                onClick={() => navigate({ page: item.page })}
-              >
-                <item.icon size={19} strokeWidth={1.6} />
-                <span>{t(item.page)}</span>
-                {item.page === 'maps' && <span className="nav-count">7</span>}
-              </button>
-            ))}
-          </nav>
-          <div className="sidebar-bottom">
-            <div className="library-status">
-              <span className="status-dot" />
-              <span>
-                {t('localLibrary')}
-                <small>{t('materialsCount', { count: db.entries.length })}</small>
+      <LinksContext.Provider
+        value={{
+          entries: db.entries,
+          articles: db.guideArticles,
+          categories: [...categories, ...db.customCategories],
+          open: openInternal,
+        }}
+      >
+        <div className="app-shell">
+          <aside className="sidebar">
+            <button className="brand" onClick={() => navigate({ page: 'maps' })}>
+              <span className="brand-mark">
+                <img src={themeLogos[db.settings.theme]} alt="CS2 Assistant" />
               </span>
-            </div>
-            {(
-              [
-                { page: 'settings', key: 'settings', icon: SettingsIcon },
-                { page: 'data', key: 'backups', icon: ArrowDownToLine },
-              ] as const
-            ).map((item) => (
-              <button
-                key={item.page}
-                className={`nav-item ${route.page === item.page ? 'active' : ''}`}
-                aria-label={t(item.key)}
-                title={t(item.key)}
-                onClick={() => navigate({ page: item.page })}
-              >
-                <item.icon size={18} />
-                <span>{t(item.key)}</span>
-              </button>
-            ))}
-            <div className="sidebar-footer">
-              CS2 ASSISTANT <span>v{APP_VERSION}</span>
-            </div>
-          </div>
-        </aside>
-        <div className="workspace">
-          <header className="topbar">
-            <div className="breadcrumbs">
-              <button onClick={() => navigate({ page: 'maps' })}>
-                <Grid2X2 size={16} />
-                <span>{t('library')}</span>
-              </button>
-              {map && (
-                <>
-                  <ChevronRight size={14} />
-                  <button onClick={() => navigate({ page: 'map', mapId: map.id })}>
-                    {map.name}
-                  </button>
-                </>
-              )}
-              {category && (
-                <>
-                  <ChevronRight size={14} />
-                  <button
-                    onClick={() =>
-                      navigate({ page: 'list', mapId: map?.id, categoryId: category.id })
-                    }
-                  >
-                    {categoryName(category, t)}
-                  </button>
-                </>
-              )}
-            </div>
-            {['maps', 'map', 'list', 'commands', 'crosshairs'].includes(route.page) && (
-              <label className="search">
-                <Search size={17} />
-                <input
-                  aria-label={t('search')}
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder={t('searchPlaceholder')}
-                />
-                {search && (
-                  <button onClick={() => setSearch('')} aria-label={t('clearSearch')}>
-                    <X size={15} />
-                  </button>
-                )}
-              </label>
-            )}
-            <span className="offline">
-              <span className="status-dot" />
-              {t('offline')}
-            </span>
-          </header>
-          <main>
-            {!window.desktop && <div className="preview-banner">{t('previewBanner')}</div>}
-            {!!error && (
-              <div className="error" role="alert">
-                {errorText(error, t)}
+              <span>
+                CS2<span className="brand-subtitle">ASSISTANT</span>
+              </span>
+              <span className="version">03</span>
+            </button>
+            <div className="nav-caption">{t('yourGuide')}</div>
+            <nav aria-label={t('navigation')}>
+              {sideItems.map((item) => (
                 <button
-                  className="icon-button"
-                  onClick={() => setError(null)}
-                  aria-label={t('close')}
+                  key={item.page}
+                  aria-label={t(item.page)}
+                  title={t(item.page)}
+                  className={`nav-item ${activePage === item.page ? 'active' : ''}`}
+                  onClick={() => navigate({ page: item.page })}
                 >
-                  <X size={17} />
+                  <item.icon size={19} strokeWidth={1.6} />
+                  <span>{t(item.page)}</span>
+                  {item.page === 'maps' && <span className="nav-count">7</span>}
+                </button>
+              ))}
+            </nav>
+            <div className="sidebar-bottom">
+              <div className="library-status">
+                <span className="status-dot" />
+                <span>
+                  {t('localLibrary')}
+                  <small>{t('materialsCount', { count: db.entries.length })}</small>
+                </span>
+              </div>
+              {(
+                [
+                  { page: 'settings', key: 'settings', icon: SettingsIcon },
+                  { page: 'data', key: 'backups', icon: ArrowDownToLine },
+                ] as const
+              ).map((item) => (
+                <button
+                  key={item.page}
+                  className={`nav-item ${route.page === item.page ? 'active' : ''}`}
+                  aria-label={t(item.key)}
+                  title={t(item.key)}
+                  onClick={() => navigate({ page: item.page })}
+                >
+                  <item.icon size={18} />
+                  <span>{t(item.key)}</span>
+                </button>
+              ))}
+              <div className="sidebar-footer">
+                CS2 ASSISTANT <span>v{APP_VERSION}</span>
+              </div>
+            </div>
+          </aside>
+          <div className="workspace">
+            <header className="topbar">
+              <div className="breadcrumbs">
+                <button onClick={() => navigate({ page: 'maps' })}>
+                  <Grid2X2 size={16} />
+                  <span>{t('library')}</span>
+                </button>
+                {map && (
+                  <>
+                    <ChevronRight size={14} />
+                    <button onClick={() => navigate({ page: 'map', mapId: map.id })}>
+                      {map.name}
+                    </button>
+                  </>
+                )}
+                {category && (
+                  <>
+                    <ChevronRight size={14} />
+                    <button
+                      onClick={() =>
+                        navigate({ page: 'list', mapId: map?.id, categoryId: category.id })
+                      }
+                    >
+                      {categoryName(category, t)}
+                    </button>
+                  </>
+                )}
+              </div>
+              {['maps', 'map', 'list', 'commands', 'crosshairs'].includes(route.page) && (
+                <label className="search">
+                  <Search size={17} />
+                  <input
+                    aria-label={t('search')}
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder={t('searchPlaceholder')}
+                  />
+                  {search && (
+                    <button onClick={() => setSearch('')} aria-label={t('clearSearch')}>
+                      <X size={15} />
+                    </button>
+                  )}
+                </label>
+              )}
+              <span className="offline">
+                <span className="status-dot" />
+                {t('offline')}
+              </span>
+            </header>
+            <main>
+              {!window.desktop && <div className="preview-banner">{t('previewBanner')}</div>}
+              {!!error && (
+                <div className="error" role="alert">
+                  {errorText(error, t)}
+                  <button
+                    className="icon-button"
+                    onClick={() => setError(null)}
+                    aria-label={t('close')}
+                  >
+                    <X size={17} />
+                  </button>
+                </div>
+              )}
+              {route.page !== 'editor' && (
+                <div className="button-row">
+                  {(historyPosition > 0 || route.page !== 'maps') && (
+                    <button
+                      className="back-button"
+                      onClick={() =>
+                        historyPosition > 0 ? history.back() : navigate({ page: 'maps' })
+                      }
+                    >
+                      <ArrowLeft size={16} />
+                      {t('back')}
+                    </button>
+                  )}
+                  {historyPosition < furthest.current && (
+                    <button className="back-button" onClick={() => history.forward()}>
+                      {t('forward')}
+                      <ArrowRight size={16} />
+                    </button>
+                  )}
+                </div>
+              )}
+              {content()}
+            </main>
+            <footer className="main-footer">
+              <span>{t('footer')}</span>
+              <span>{t('footerSmall')}</span>
+            </footer>
+          </div>
+          {toast && (
+            <div className="toast" role="status">
+              <Check size={18} />
+              {toast}
+            </div>
+          )}
+          {deleting && (
+            <Modal
+              title={t('deleteTitle')}
+              close={() => {
+                if (!busy) {
+                  setDeleting(null);
+                  setError(null);
+                }
+              }}
+            >
+              <p>{t('deleteDescription', { name: deleting.title })}</p>
+              {!!error && (
+                <p className="error" role="alert">
+                  {errorText(error, t)}
+                </p>
+              )}
+              <div className="form-actions">
+                <button disabled={busy} className="secondary" onClick={() => setDeleting(null)}>
+                  {t('cancel')}
+                </button>
+                <button
+                  disabled={busy}
+                  className="primary destructive"
+                  onClick={() => void remove()}
+                >
+                  {t(busy ? 'deleting' : 'remove')}
                 </button>
               </div>
-            )}
-            {route.page !== 'maps' && route.page !== 'editor' && (
-              <button
-                className="back-button"
-                onClick={() =>
-                  navigate(
-                    route.page === 'detail'
-                      ? { page: 'list', mapId: route.mapId, categoryId: route.categoryId }
-                      : route.page === 'list'
-                        ? { page: 'map', mapId: route.mapId }
-                        : { page: 'maps' },
-                  )
-                }
-              >
-                <ArrowLeft size={16} />
-                {t(
-                  route.page === 'detail'
-                    ? 'backToList'
-                    : route.page === 'list'
-                      ? 'backToMap'
-                      : 'allMaps',
-                )}
-              </button>
-            )}
-            {content()}
-          </main>
-          <footer className="main-footer">
-            <span>{t('footer')}</span>
-            <span>{t('footerSmall')}</span>
-          </footer>
+            </Modal>
+          )}
+          {command && (
+            <CommandEditor
+              command={command}
+              close={closeEditor}
+              dirty={() => setDirty(true)}
+              save={async (cmd) => {
+                await mutate((current) => ({
+                  ...current,
+                  commands: [...current.commands.filter((c) => c.id !== cmd.id), cmd],
+                }));
+                setCommand(null);
+                setDirty(false);
+                setToast(t('saved'));
+              }}
+            />
+          )}
+          {crosshair && (
+            <CrosshairEditor
+              crosshair={crosshair}
+              close={closeEditor}
+              dirty={() => setDirty(true)}
+              save={async (item) => {
+                await mutate((current) => ({
+                  ...current,
+                  crosshairs: [...current.crosshairs.filter((c) => c.id !== item.id), item],
+                }));
+                setCrosshair(null);
+                setDirty(false);
+                setToast(t('saved'));
+              }}
+            />
+          )}
+          {lightbox && (
+            <Modal title={lightbox.title} wide close={() => setLightbox(null)}>
+              <div className="lightbox-content">
+                <ShotVisual {...lightbox} lightbox />
+              </div>
+            </Modal>
+          )}
         </div>
-        {toast && (
-          <div className="toast" role="status">
-            <Check size={18} />
-            {toast}
-          </div>
-        )}
-        {deleting && (
-          <Modal
-            title={t('deleteTitle')}
-            close={() => {
-              if (!busy) {
-                setDeleting(null);
-                setError(null);
-              }
-            }}
-          >
-            <p>{t('deleteDescription', { name: deleting.title })}</p>
-            {!!error && (
-              <p className="error" role="alert">
-                {errorText(error, t)}
-              </p>
-            )}
-            <div className="form-actions">
-              <button disabled={busy} className="secondary" onClick={() => setDeleting(null)}>
-                {t('cancel')}
-              </button>
-              <button disabled={busy} className="primary destructive" onClick={() => void remove()}>
-                {t(busy ? 'deleting' : 'remove')}
-              </button>
-            </div>
-          </Modal>
-        )}
-        {command && (
-          <CommandEditor
-            command={command}
-            close={closeEditor}
-            dirty={() => setDirty(true)}
-            save={async (cmd) => {
-              await mutate((current) => ({
-                ...current,
-                commands: [...current.commands.filter((c) => c.id !== cmd.id), cmd],
-              }));
-              setCommand(null);
-              setDirty(false);
-              setToast(t('saved'));
-            }}
-          />
-        )}
-        {crosshair && (
-          <CrosshairEditor
-            crosshair={crosshair}
-            close={closeEditor}
-            dirty={() => setDirty(true)}
-            save={async (item) => {
-              await mutate((current) => ({
-                ...current,
-                crosshairs: [...current.crosshairs.filter((c) => c.id !== item.id), item],
-              }));
-              setCrosshair(null);
-              setDirty(false);
-              setToast(t('saved'));
-            }}
-          />
-        )}
-        {lightbox && (
-          <Modal title={lightbox.title} wide close={() => setLightbox(null)}>
-            <div className="lightbox-content">
-              <ShotVisual {...lightbox} lightbox />
-            </div>
-          </Modal>
-        )}
-      </div>
+      </LinksContext.Provider>
     </LanguageContext.Provider>
   );
 }

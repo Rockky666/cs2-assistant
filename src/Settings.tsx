@@ -15,7 +15,8 @@ const themeOptions: { id: Theme; key: MessageKey; color: string }[] = [
   { id: 'dark-blue', key: 'theme_blue', color: '#0B1120' },
   { id: 'dark', key: 'theme_dark', color: '#0D0D0D' },
   { id: 'dark-red', key: 'theme_red', color: '#480002' },
-  { id: 'dark-green', key: 'theme_green', color: '#233C00' },
+  { id: 'orange', key: 'theme_orange', color: '#21150D' },
+  { id: 'light', key: 'theme_light', color: '#F4F5F7' },
 ];
 export function Settings({
   settings,

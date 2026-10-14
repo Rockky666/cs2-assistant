@@ -95,6 +95,7 @@ export function ImageSlot({
 export function ImageGalleryEditor({
   images,
   utility,
+  flash = false,
   throwType,
   onChange,
   busy,
@@ -102,6 +103,7 @@ export function ImageGalleryEditor({
 }: IO & {
   images: Shot[];
   utility: boolean;
+  flash?: boolean;
   throwType: string;
   onChange: (images: Shot[]) => void;
 }) {
@@ -131,7 +133,7 @@ export function ImageGalleryEditor({
   }
   return (
     <>
-      <p className="muted">{t(utility ? 'shotsOrder' : 'shotsHint')}</p>
+      <p className="muted">{t(flash ? 'flashShots' : utility ? 'shotsOrder' : 'shotsHint')}</p>
       <input
         className="visually-hidden"
         ref={input}
@@ -181,7 +183,7 @@ export function ImageGalleryEditor({
             <div className="shot-caption">{utility && index < 3 ? labels[index] : shot.name}</div>
           </div>
         ))}
-        {Array.from({ length: Math.max(0, 3 - images.length) }, (_, i) => (
+        {Array.from({ length: Math.max(0, (flash ? 2 : 3) - images.length) }, (_, i) => (
           <button
             type="button"
             className="upload-tile"

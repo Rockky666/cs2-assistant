@@ -2,6 +2,41 @@ import type { Category, Language } from './model';
 
 // Every interface string has Russian, English and Portuguese translations.
 export const messages = {
+  guide: ['Руководство', 'Guide', 'Guia'],
+  guideHint: [
+    'Создавай темы и подтемы с описанием в Markdown.',
+    'Create topics and Markdown articles.',
+    'Cria temas e artigos em Markdown.',
+  ],
+  addTopic: ['Создать тему', 'Create topic', 'Criar tema'],
+  addArticle: ['Создать подтему', 'Create article', 'Criar artigo'],
+  topicTitle: ['Название темы', 'Topic title', 'Nome do tema'],
+  articleTitle: ['Название подтемы', 'Article title', 'Nome do artigo'],
+  deleteTopic: [
+    'Удалить тему вместе со всеми подтемами?',
+    'Delete this topic and all its articles?',
+    'Eliminar o tema e todos os seus artigos?',
+  ],
+  back: ['Назад', 'Back', 'Voltar'],
+  forward: ['Вперёд', 'Forward', 'Avançar'],
+  insertLink: ['Вставить ссылку', 'Insert link', 'Inserir ligação'],
+  linkSearch: [
+    'Найти материал или подтему',
+    'Find a material or guide article',
+    'Procurar material ou artigo',
+  ],
+  missingLink: [
+    'Материал недоступен: он удалён или отсутствует в базе.',
+    'Material unavailable: it was deleted or is missing from this library.',
+    'Material indisponível: foi eliminado ou não existe na biblioteca.',
+  ],
+  flashShots: [
+    'Позиция → прицеливание. Скрин результата необязателен, его можно добавить отдельно.',
+    'Position → aiming point. The result screenshot is optional and can be added separately.',
+    'Posição → pontaria. A captura do resultado é opcional.',
+  ],
+  theme_orange: ['Оранжевая', 'Orange', 'Laranja'],
+  theme_light: ['Светлая', 'Light', 'Claro'],
   maps: ['Карты', 'Maps', 'Mapas'],
   aim: ['Стрельба', 'Aim training', 'Treino de mira'],
   peeks: ['Пики', 'Peeks', 'Aberturas'],
@@ -86,13 +121,13 @@ export const messages = {
   cat_he: ['HE-гранаты', 'HE grenades', 'Granadas HE'],
   cat_flash: ['Флешки', 'Flashbangs', 'Granadas de luz'],
   cat_molotov: ['Молотовы', 'Molotovs', 'Molotovs'],
-  cat_lineup: ['Лайнапы', 'Lineups', 'Alinhamentos'],
+  cat_lineup: ['Раскиды', 'Lineups', 'Alinhamentos'],
   cat_position: ['Позиции', 'Positions', 'Posições'],
   cat_tactic: ['Тактики', 'Tactics', 'Táticas'],
   cat_tip: ['Полезные фишки', 'Useful tips', 'Dicas úteis'],
   kind_utility: ['Гранаты', 'Utility', 'Granadas'],
   kind_note: ['Заметки и тактики', 'Notes and tactics', 'Notas e táticas'],
-  kind_lineup: ['Лайнапы', 'Lineups', 'Alinhamentos'],
+  kind_lineup: ['Раскиды', 'Lineups', 'Alinhamentos'],
   hint_utility: [
     'Позиция, прицеливание и результат броска.',
     'Position, aiming point and throw result.',
@@ -321,7 +356,6 @@ export const messages = {
   theme_blue: ['Тёмно-синяя', 'Dark blue', 'Azul escuro'],
   theme_dark: ['Тёмная', 'Dark', 'Escuro'],
   theme_red: ['Тёмно-красная', 'Dark red', 'Vermelho escuro'],
-  theme_green: ['Тёмно-зелёная', 'Dark green', 'Verde escuro'],
   about: ['О приложении', 'About', 'Sobre'],
   version: ['Версия', 'Version', 'Versão'],
   developer: ['Разработчик', 'Developer', 'Programador'],
@@ -431,14 +465,14 @@ export const messages = {
     'Até 20 etiquetas, com um máximo de 40 caracteres cada.',
   ],
   ERR_LINEUP_LIMIT: [
-    'Можно добавить до 20 вариантов лайнапа.',
+    'Можно добавить до 20 вариантов раскида.',
     'You can add up to 20 lineup variants.',
     'Podes adicionar até 20 variantes de alinhamento.',
   ],
   ERR_CODE: [
-    'Добавь скриншот и код вида CSGO-xxxxx-xxxxx-xxxxx-xxxxx-xxxxx.',
-    'Add a screenshot and a code in the format CSGO-xxxxx-xxxxx-xxxxx-xxxxx-xxxxx.',
-    'Adiciona uma captura e um código no formato CSGO-xxxxx-xxxxx-xxxxx-xxxxx-xxxxx.',
+    'Добавь скриншот и непустой код прицела.',
+    'Add a screenshot and a nonempty crosshair code.',
+    'Adiciona uma captura e um código de mira.',
   ],
 } as const;
 export type MessageKey = keyof typeof messages;

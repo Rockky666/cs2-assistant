@@ -3,14 +3,14 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises';
 
 // Format conversion only: the supplied SVG artwork and colours are preserved.
 await mkdir('build', { recursive: true });
-for (const name of ['Blue-dark-logo', 'Dark-logo', 'Red-dark-logo', 'Green-dark-logo']) {
+for (const name of ['Dark-logo', 'Orange-logo', 'Light-logo']) {
   const png = new Resvg(await readFile(`public/assets/Logo-themes/${name}.svg`), {
     fitTo: { mode: 'width', value: 256 },
   })
     .render()
     .asPng();
   await writeFile(`public/assets/Logo-themes/${name}.png`, png);
-  if (name === 'Blue-dark-logo') {
+  if (name === 'Dark-logo') {
     const header = Buffer.alloc(22);
     header.writeUInt16LE(1, 2);
     header.writeUInt16LE(1, 4);

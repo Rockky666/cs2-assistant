@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, readFile, writeFile, mkdir, rm } from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
+import { checkV03 } from './smoke-v03.mjs';
 
 const dir = await mkdtemp(path.join(os.tmpdir(), 'cs2-desktop-'));
 const artifacts = path.resolve('output/playwright');
@@ -91,7 +92,7 @@ try {
   await button('Просмотр').click();
   await page.getByRole('heading', { name: 'Проверка', exact: true }).waitFor();
   await saveMaterial('Смок в джангл');
-  assert.equal((await db()).version, 2);
+  assert.equal((await db()).version, 3);
   assert.equal(JSON.parse(await readFile(libraryFile + '.bak', 'utf8')).version, 1);
   assert.equal((await db()).entries[1].images[2].name, 'extra.jpg');
   assert.deepEqual((await db()).entries[1].tags, ['выход A']);
@@ -108,7 +109,7 @@ try {
   await button('Редактировать').click();
   await button('Удалить Скриншот 4').click();
   await saveMaterial('Смок в джангл');
-  await button('К списку').click();
+  await button('Смоки').click();
   await button('Закрепить Старая раскидка').click();
   await button('Открепить Старая раскидка').waitFor();
   assert.equal(await page.locator('.entry-card h3').first().textContent(), 'Старая раскидка');
@@ -138,7 +139,7 @@ try {
   assert.deepEqual((await db()).entries.find((e) => e.title === 'Разбор выхода').tags, ['команда']);
   await goMirage();
   await button(/^Разборы/).waitFor();
-  await button(/^Лайнапы/).click();
+  await button(/^Раскиды/).click();
   await button('Добавить материал').first().click();
   await page.getByRole('textbox', { name: /^Название/ }).fill('Два смока с одной позиции');
   await page.getByRole('textbox', { name: /^Откуда/ }).fill('Т-спавн');
@@ -194,7 +195,7 @@ try {
     .getByLabel('Выбрать скриншоты: Скриншот прицела', { exact: true })
     .setInputFiles(upload('crosshair.jpg'));
   const code = 'CSGO-aaaaa-bbbbb-ccccc-ddddd-eeeee';
-  const code2 = 'CSGO-AAAAA-BBBBB-CCCCC-DDDDD-EEEEE';
+  const code2 = 'cl_crosshairsize 2; cl_crosshairgap -3';
   await page.getByRole('textbox', { name: 'Код импорта', exact: true }).fill(code);
   await button('Сохранить').click();
   await button(`Копировать ${code}`).click();
@@ -231,9 +232,10 @@ try {
   await button('Настройки').click();
   for (const [name, theme, color, logo] of [
     ['Тёмная', 'dark', 'rgb(13, 13, 13)', 'Dark-logo'],
-    ['Тёмно-красная', 'dark-red', 'rgb(72, 0, 2)', 'Red-dark-logo'],
-    ['Тёмно-зелёная', 'dark-green', 'rgb(35, 60, 0)', 'Green-dark-logo'],
-    ['Тёмно-синяя', 'dark-blue', 'rgb(11, 17, 32)', 'Blue-dark-logo'],
+    ['Тёмно-красная', 'dark-red', 'rgb(72, 0, 2)', 'Red-logo'],
+    ['Оранжевая', 'orange', 'rgb(33, 21, 13)', 'Orange-logo'],
+    ['Светлая', 'light', 'rgb(244, 245, 247)', 'Light-logo'],
+    ['Тёмно-синяя', 'dark-blue', 'rgb(11, 17, 32)', 'Blue-logo'],
   ]) {
     await button(new RegExp(`^${name}`)).click();
     await page.waitForFunction((theme) => document.documentElement.dataset.theme === theme, theme);
@@ -243,6 +245,19 @@ try {
     );
     assert.ok((await page.locator('.brand-mark img').getAttribute('src')).includes(logo));
     assert.equal((await db()).settings.theme, theme);
+    await page.evaluate(() =>
+      Promise.all(document.getAnimations().map((animation) => animation.finished.catch(() => {}))),
+    );
+    await page.waitForFunction(() =>
+      [...document.querySelectorAll('.theme-preview img')].every(
+        (img) => img.complete && img.naturalWidth > 0,
+      ),
+    );
+    if (theme === 'light' || theme === 'orange')
+      await page.screenshot({
+        path: path.join(artifacts, `desktop-theme-${theme}.png`),
+        fullPage: true,
+      });
   }
   await page.getByRole('combobox', { name: 'Язык интерфейса' }).selectOption('en');
   await page.getByRole('heading', { name: 'Settings', exact: true }).waitFor();
@@ -257,14 +272,14 @@ try {
   await button('Settings').click();
   await page.getByRole('combobox', { name: 'Interface language' }).selectOption('pt');
   await page.getByRole('heading', { name: 'Definições' }).waitFor();
-  await button(/^Verde escuro/).click();
-  await page.waitForFunction(() => document.documentElement.dataset.theme === 'dark-green');
+  await button(/^Laranja/).click();
+  await page.waitForFunction(() => document.documentElement.dataset.theme === 'orange');
   await button('Miras').click();
   await page.getByRole('heading', { name: 'Miras' }).waitFor();
   await app.close();
   await launch();
   assert.equal(await page.locator('html').getAttribute('lang'), 'pt');
-  assert.equal(await page.locator('html').getAttribute('data-theme'), 'dark-green');
+  assert.equal(await page.locator('html').getAttribute('data-theme'), 'orange');
   const persisted = await db();
   assert.ok(persisted.entries.find((e) => e.title === 'Старая раскидка').pinned);
   assert.ok(persisted.crosshairs[0].pinned);
@@ -275,6 +290,7 @@ try {
     'PASS: all map images, alternative maps, all theme colours/logos, three languages and restart persistence.',
   );
 
+  await checkV03({ page, db, upload, artifacts });
   const backup = path.join(dir, 'export.json');
   await app.evaluate(({ dialog }, file) => {
     dialog.showSaveDialog = async () => ({ canceled: false, filePath: file });
@@ -313,7 +329,7 @@ try {
   await page.screenshot({ path: path.join(artifacts, 'desktop-compact.png'), fullPage: true });
   assert.deepEqual(errors, []);
   console.log(
-    'PASS: full v2 backup round-trip, corrupt import rejection, delete/cancel and compact layout.',
+    'PASS: full v3 backup round-trip, corrupt import rejection, delete/cancel and compact layout.',
   );
 } catch (error) {
   console.error(error);

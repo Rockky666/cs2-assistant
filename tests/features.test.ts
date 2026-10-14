@@ -44,16 +44,16 @@ test('v1 files migrate without losing notes, images, order or commands; first wr
     const original = JSON.stringify(old);
     await writeFile(file, original);
     const migrated = await readDatabase(file);
-    assert.equal(migrated.version, 2);
+    assert.equal(migrated.version, 3);
     assert.deepEqual(migrated.entries[0].images, oldEntry.images);
     assert.equal(migrated.entries[0].pinned, false);
     assert.deepEqual(migrated.entries[0].tags, []);
     assert.equal(migrated.commands[0].command, old.commands[0].command);
-    assert.deepEqual(migrated.settings, { language: 'ru', theme: 'dark-blue' });
+    assert.deepEqual(migrated.settings, { language: 'ru', theme: 'dark' });
     assert.equal(await readFile(file, 'utf8'), original);
     await writeDatabase(file, migrated);
     assert.equal(await readFile(file + '.bak', 'utf8'), original);
-    assert.equal((await readDatabase(file)).version, 2);
+    assert.equal((await readDatabase(file)).version, 3);
     assert.throws(
       () => parseDatabase({ ...old, entries: [{ ...oldEntry, from: '' }] }),
       /ERR_INVALID_DATA/,
@@ -128,7 +128,7 @@ test('category conversion preserves screenshot order and refuses conversions tha
     /ERR_IMAGES_LIMIT/,
   );
 });
-test('v2 backup round-trip preserves lineups, tags, pins, settings, custom categories and crosshairs', () => {
+test('v3 backup round-trip preserves lineups, tags, pins, settings, custom categories and crosshairs', () => {
   const custom: Category = {
     id: crypto.randomUUID(),
     name: 'Retakes',
@@ -138,7 +138,7 @@ test('v2 backup round-trip preserves lineups, tags, pins, settings, custom categ
   const entry = moveEntryCategory(utility(), categories[0], custom);
   const db = {
     ...emptyDatabase(),
-    settings: { language: 'pt', theme: 'dark-green' },
+    settings: { language: 'pt', theme: 'orange' },
     customCategories: [custom],
     entries: [
       {
@@ -166,9 +166,7 @@ test('v2 backup round-trip preserves lineups, tags, pins, settings, custom categ
   assert.throws(() =>
     parseDatabase({ ...db, entries: [{ ...db.entries[0], images: [shot(), shot()] }] }),
   );
-  assert.throws(() =>
-    parseDatabase({ ...db, crosshairs: [{ ...db.crosshairs[0], code: 'not-a-code' }] }),
-  );
+  assert.throws(() => parseDatabase({ ...db, crosshairs: [{ ...db.crosshairs[0], code: '   ' }] }));
   assert.throws(() => parseDatabase({ ...db, settings: { language: 'en', theme: 'unknown' } }));
 });
 test('all three translations are present and keep the same placeholders', () => {

@@ -139,7 +139,7 @@ export function CrosshairEditor({
             <textarea
               autoFocus
               required
-              maxLength={34}
+              maxLength={10000}
               value={draft.code}
               onChange={(e) => {
                 setDraft({ ...draft, code: e.target.value });

@@ -8,3 +8,5 @@ output/
 .DS_Store
 /build/
 /public/assets/Logo-themes/*.png
+!/public/assets/Logo-themes/Blue-logo.png
+!/public/assets/Logo-themes/Red-logo.png

@@ -12,6 +12,7 @@ import {
   type Entry,
   type Lineup,
 } from './model';
+import { MarkdownInput } from './links';
 import { Markdown } from './components';
 import { ImageGalleryEditor, ImageSlot } from './ImageFields';
 import { useI18n } from './i18n';
@@ -522,6 +523,7 @@ export default function Editor({
             <ImageGalleryEditor
               images={draft.images}
               utility={utility}
+              flash={draft.categoryId === 'flash'}
               throwType={draft.throwType}
               onChange={(shots) => update('images', shots)}
               busy={setReading}
@@ -555,14 +557,7 @@ export default function Editor({
               <Markdown>{draft.markdown || `*${t('noDescription')}*`}</Markdown>
             </div>
           ) : (
-            <textarea
-              className="markdown-input"
-              maxLength={100000}
-              value={draft.markdown}
-              onChange={(e) => update('markdown', e.target.value)}
-              placeholder={t('markdownPlaceholder')}
-              aria-label={t('markdownLabel')}
-            />
+            <MarkdownInput value={draft.markdown} change={(value) => update('markdown', value)} />
           )}
           <p className="field-hint">{t('markdownHint')}</p>
         </section>

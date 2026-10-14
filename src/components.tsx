@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useRef, useContext, type ReactNode } from 'react';
 import {
   X,
   Cloud,
@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { LinksContext, parseInternalLink } from './links';
 import { useI18n } from './i18n';
 
 export const categoryIcons = {
@@ -31,14 +32,23 @@ export function categoryIcon(id: string) {
   return categoryIcons[id as keyof typeof categoryIcons] ?? Folder;
 }
 export function Markdown({ children }: { children: string }) {
+  const links = useContext(LinksContext);
   const { t } = useI18n();
   return (
     <div className="markdown">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         skipHtml
+        urlTransform={(url) => (parseInternalLink(url) ? url : '')}
         components={{
-          a: ({ children }) => <span className="markdown-link">{children}</span>,
+          a: ({ children, href }) =>
+            href && parseInternalLink(href) ? (
+              <button type="button" className="markdown-link" onClick={() => links.open(href)}>
+                {children}
+              </button>
+            ) : (
+              <span>{children}</span>
+            ),
           img: ({ alt }) => (
             <span className="muted">[{t('markdownImage', { name: alt || t('addShots') })}]</span>
           ),
