@@ -1,7 +1,21 @@
 import { useEffect, useRef, type ReactNode } from 'react';
-import { X, Cloud, Bomb, Zap, Flame, MapPin, Route, Lightbulb } from 'lucide-react';
+import {
+  X,
+  Cloud,
+  Bomb,
+  Zap,
+  Flame,
+  MapPin,
+  Route,
+  Lightbulb,
+  Layers3,
+  Folder,
+  Pin,
+  PinOff,
+} from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { useI18n } from './i18n';
 
 export const categoryIcons = {
   smoke: Cloud,
@@ -11,8 +25,13 @@ export const categoryIcons = {
   position: MapPin,
   tactic: Route,
   tip: Lightbulb,
+  lineup: Layers3,
 };
+export function categoryIcon(id: string) {
+  return categoryIcons[id as keyof typeof categoryIcons] ?? Folder;
+}
 export function Markdown({ children }: { children: string }) {
+  const { t } = useI18n();
   return (
     <div className="markdown">
       <ReactMarkdown
@@ -21,7 +40,7 @@ export function Markdown({ children }: { children: string }) {
         components={{
           a: ({ children }) => <span className="markdown-link">{children}</span>,
           img: ({ alt }) => (
-            <span className="muted">[Изображение: {alt || 'добавьте файл в скриншоты'}]</span>
+            <span className="muted">[{t('markdownImage', { name: alt || t('addShots') })}]</span>
           ),
         }}
       >
@@ -41,6 +60,7 @@ export function Modal({
   close: () => void;
   wide?: boolean;
 }) {
+  const { t } = useI18n();
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     ref.current?.showModal();
@@ -57,11 +77,52 @@ export function Modal({
     >
       <div className="modal-heading">
         <h2>{title}</h2>
-        <button className="icon-button" onClick={close} aria-label="Закрыть">
+        <button className="icon-button" onClick={close} aria-label={t('close')}>
           <X size={20} />
         </button>
       </div>
       {children}
     </dialog>
+  );
+}
+
+export type Lightbox = { data: string; title: string; caption?: string };
+export function ShotVisual({
+  data,
+  title,
+  caption,
+  lightbox = false,
+}: Lightbox & { lightbox?: boolean }) {
+  return (
+    <span className={`shot-visual ${lightbox ? 'enlarged' : ''}`}>
+      <img src={data} alt={title} />
+      {caption && <span className="throw-overlay">{caption}</span>}
+    </span>
+  );
+}
+export function PinButton({
+  pinned,
+  name,
+  disabled,
+  toggle,
+}: {
+  pinned: boolean;
+  name: string;
+  disabled?: boolean;
+  toggle: () => void;
+}) {
+  const { t } = useI18n();
+  const Icon = pinned ? PinOff : Pin;
+  return (
+    <button
+      className={`icon-button ${pinned ? 'is-pinned' : ''}`}
+      aria-label={`${t(pinned ? 'unpin' : 'pin')} ${name}`}
+      title={t(pinned ? 'unpin' : 'pin')}
+      aria-pressed={pinned}
+      disabled={disabled}
+      onClick={toggle}
+    >
+      <Icon size={17} />
+    </button>
   );
 }

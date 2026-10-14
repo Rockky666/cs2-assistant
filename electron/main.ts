@@ -1,9 +1,12 @@
-import { app, BrowserWindow, dialog, ipcMain, clipboard } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, clipboard, shell } from 'electron';
 import path from 'node:path';
 import { readFile, stat, writeFile } from 'node:fs/promises';
 import { mkdirSync } from 'node:fs';
 import { readDatabase, writeDatabase } from './storage';
-import { MAX_DATABASE_BYTES, parseDatabase } from '../src/model';
+import { MAX_DATABASE_BYTES, parseDatabase, type Language, type Settings } from '../src/model';
+import { translator } from '../src/messages';
+import { REPOSITORY } from '../src/app-info';
+import { themeLogos } from '../src/assets';
 
 let window: BrowserWindow;
 const testData = !app.isPackaged && process.env.CS2_TEST_DATA_DIR;
@@ -22,6 +25,18 @@ else {
   app.whenReady().then(() => {
     const file = path.join(app.getPath('userData'), 'library.json');
     let loaded = false;
+    let language: Language = 'ru';
+    const applySettings = (settings: Settings) => {
+      language = settings.language;
+      window.setIcon(
+        path.join(app.getAppPath(), 'dist', themeLogos[settings.theme].replace(/\.svg$/, '.png')),
+      );
+      window.setBackgroundColor(
+        { 'dark-blue': '#0b1120', dark: '#0d0d0d', 'dark-red': '#480002', 'dark-green': '#233c00' }[
+          settings.theme
+        ],
+      );
+    };
     let queue: Promise<unknown> = Promise.resolve();
     const handle = (name: string, action: (...args: any[]) => unknown) =>
       ipcMain.handle(name, (event, ...args) => {
@@ -29,17 +44,22 @@ else {
           event.sender !== window.webContents ||
           event.senderFrame !== window.webContents.mainFrame
         )
-          throw new Error('Недоступно');
+          throw new Error('ERR_INVALID_DATA');
         return action(...args);
       });
     handle('library:load', async () => {
       const data = await readDatabase(file);
       loaded = true;
+      applySettings(data.settings);
       return data;
     });
     handle('library:save', (input: unknown) => {
-      if (!loaded) throw new Error('База не загружена');
-      const next = queue.then(() => writeDatabase(file, input));
+      if (!loaded) throw new Error('ERR_READ');
+      const next = queue.then(async () => {
+        const data = await writeDatabase(file, input);
+        applySettings(data.settings);
+        return data;
+      });
       queue = next.catch(() => {});
       return next;
     });
@@ -47,7 +67,7 @@ else {
       await queue;
       const result = await dialog.showSaveDialog(window, {
         defaultPath: `cs2-backup-${new Date().toISOString().slice(0, 10)}.json`,
-        filters: [{ name: 'Резервная копия', extensions: ['json'] }],
+        filters: [{ name: translator(language)('backupSection'), extensions: ['json'] }],
       });
       if (result.canceled || !result.filePath) return false;
       await writeFile(result.filePath, JSON.stringify(await readDatabase(file)));
@@ -56,17 +76,27 @@ else {
     handle('library:import', async () => {
       const result = await dialog.showOpenDialog(window, {
         properties: ['openFile'],
-        filters: [{ name: 'Резервная копия', extensions: ['json'] }],
+        filters: [{ name: translator(language)('backupSection'), extensions: ['json'] }],
       });
       if (result.canceled) return null;
       const source = result.filePaths[0];
-      if ((await stat(source)).size > MAX_DATABASE_BYTES) throw new Error('Файл превышает 100 МБ');
-      const data = parseDatabase(JSON.parse(await readFile(source, 'utf8')));
+      if ((await stat(source)).size > MAX_DATABASE_BYTES) throw new Error('ERR_TOO_LARGE');
+      let data;
+      try {
+        data = parseDatabase(JSON.parse(await readFile(source, 'utf8')));
+      } catch {
+        throw new Error('ERR_INVALID_DATA');
+      }
+      const t = translator(language);
       const answer = await dialog.showMessageBox(window, {
         type: 'warning',
-        title: 'Восстановление копии',
-        message: `Заменить текущую библиотеку? В копии: ${data.entries.length} материалов, ${data.commands.length} команд.`,
-        buttons: ['Отмена', 'Заменить'],
+        title: t('importTitle'),
+        message: t('importQuestion', {
+          entries: data.entries.length,
+          commands: data.commands.length,
+          crosshairs: data.crosshairs.length,
+        }),
+        buttons: [t('cancel'), t('replace')],
         defaultId: 0,
         cancelId: 0,
       });
@@ -75,12 +105,14 @@ else {
       queue = next.catch(() => {});
       await next;
       loaded = true;
+      applySettings(data.settings);
       return data;
     });
     handle('clipboard:write', (text: unknown) => {
-      if (typeof text !== 'string' || text.length > 10000) throw new Error('Некорректная команда');
+      if (typeof text !== 'string' || text.length > 10000) throw new Error('ERR_INVALID_DATA');
       clipboard.writeText(text);
     });
+    handle('app:repository', () => shell.openExternal(REPOSITORY));
     window = new BrowserWindow({
       width: 1360,
       height: 900,
@@ -101,9 +133,8 @@ else {
     window.webContents.on('will-prevent-unload', (event) => {
       const choice = dialog.showMessageBoxSync(window, {
         type: 'question',
-        message: 'Закрыть без сохранения?',
-        detail: 'Несохранённые изменения будут потеряны.',
-        buttons: ['Остаться', 'Закрыть'],
+        message: translator(language)('unsaved'),
+        buttons: [translator(language)('stay'), translator(language)('close')],
         defaultId: 0,
         cancelId: 0,
       });

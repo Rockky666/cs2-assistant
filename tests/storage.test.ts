@@ -15,6 +15,9 @@ const entry = (): Entry => ({
   to: 'Джангл',
   throwType: 'Jumpthrow',
   markdown: '**Тест**',
+  tags: [],
+  pinned: false,
+  lineups: [],
   images: [{ id: crypto.randomUUID(), name: 'shot.png', data: 'data:image/png;base64,aGVsbG8=' }],
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
@@ -29,7 +32,7 @@ test('empty install, persistence across reads and previous-version backup', asyn
     assert.deepEqual(await readDatabase(file), first);
     const second = {
       ...first,
-      commands: [{ id: crypto.randomUUID(), title: 'FPS', command: 'cl_showfps 1' }],
+      commands: [{ id: crypto.randomUUID(), title: 'FPS', command: 'cl_showfps 1', pinned: false }],
     };
     await writeDatabase(file, second);
     assert.deepEqual(await readDatabase(file), second);
@@ -43,9 +46,9 @@ test('corrupt and incompatible data fail without erasing the file', async () => 
   const file = path.join(dir, 'library.json');
   try {
     await writeFile(file, '{broken');
-    await assert.rejects(readDatabase(file), /Исходный файл сохранён/);
+    await assert.rejects(readDatabase(file), /ERR_READ/);
     assert.equal(await readFile(file, 'utf8'), '{broken');
-    await assert.rejects(writeDatabase(file, { version: 2 }), /Некорректные данные/);
+    await assert.rejects(writeDatabase(file, { version: 99 }), /ERR_INVALID_DATA/);
     assert.equal(await readFile(file, 'utf8'), '{broken');
   } finally {
     await rm(dir, { recursive: true, force: true });
@@ -53,7 +56,7 @@ test('corrupt and incompatible data fail without erasing the file', async () => 
 });
 test('imports reject invalid categories, executable image data, duplicate IDs and incomplete throws', () => {
   const base = { ...emptyDatabase(), entries: [entry()] };
-  assert.throws(() => parseDatabase({ ...base, version: 2 }));
+  assert.throws(() => parseDatabase({ ...base, version: 99 }));
   assert.throws(() => parseDatabase({ ...base, entries: [{ ...entry(), categoryId: 'unknown' }] }));
   assert.throws(() => parseDatabase({ ...base, entries: [{ ...entry(), from: ' ' }] }));
   assert.throws(() => parseDatabase({ ...base, entries: [base.entries[0], base.entries[0]] }));

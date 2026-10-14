@@ -5,4 +5,5 @@ contextBridge.exposeInMainWorld('desktop', {
   exportBackup: () => ipcRenderer.invoke('library:export'),
   importBackup: () => ipcRenderer.invoke('library:import'),
   copy: (text: string) => ipcRenderer.invoke('clipboard:write', text),
+  openRepository: () => ipcRenderer.invoke('app:repository'),
 });

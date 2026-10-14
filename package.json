@@ -1,6 +1,6 @@
 {
   "name": "cs2-assistant",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "Локальный справочник Counter-Strike 2",
@@ -10,7 +10,7 @@
   "scripts": {
     "format": "prettier --write .",
     "dev": "vite --host 127.0.0.1",
-    "build": "tsc --noEmit && vite build && node scripts/build-electron.mjs",
+    "build": "node scripts/build-icons.mjs && tsc --noEmit && vite build && node scripts/build-electron.mjs",
     "start": "npm run build && electron .",
     "test": "tsx --test tests/*.test.ts",
     "test:desktop": "npm run build && node scripts/smoke-electron.mjs",
@@ -31,7 +31,8 @@
     ],
     "win": {
       "target": "portable",
-      "signAndEditExecutable": false
+      "signExecutable": false,
+      "icon": "build/icon.ico"
     },
     "portable": {
       "artifactName": "CS2-Assistant-${version}-portable.exe"
@@ -46,6 +47,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
     "@types/node": "^26.6.5",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",

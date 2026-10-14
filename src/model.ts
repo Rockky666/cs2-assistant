@@ -1,59 +1,28 @@
 import { z } from 'zod';
 
 export const maps = [
-  {
-    id: 'dust2',
-    name: 'Dust 2',
-    code: 'D2',
-    subtitle: 'Песок и длинные дистанции',
-    color: '#ccac76',
-  },
-  {
-    id: 'mirage',
-    name: 'Mirage',
-    code: 'MR',
-    subtitle: 'Контроль центра — ключ к раунду',
-    color: '#7d9fd0',
-  },
-  {
-    id: 'nuke',
-    name: 'Nuke',
-    code: 'NK',
-    subtitle: 'Два уровня. Больше возможностей.',
-    color: '#7ab6c5',
-  },
-  {
-    id: 'ancient',
-    name: 'Ancient',
-    code: 'AN',
-    subtitle: 'Среди руин и узких проходов',
-    color: '#80ad92',
-  },
-  {
-    id: 'inferno',
-    name: 'Inferno',
-    code: 'IN',
-    subtitle: 'Каждый метр имеет значение',
-    color: '#c98b76',
-  },
-  { id: 'anubis', name: 'Anubis', code: 'AB', subtitle: 'По обе стороны канала', color: '#b9a472' },
-  {
-    id: 'cache',
-    name: 'Cache',
-    code: 'CH',
-    subtitle: 'Знакомые углы. Новые идеи.',
-    color: '#9aa681',
-  },
+  { id: 'dust2', name: 'Dust 2', code: 'D2', color: '#ccac76' },
+  { id: 'mirage', name: 'Mirage', code: 'MR', color: '#7d9fd0' },
+  { id: 'nuke', name: 'Nuke', code: 'NK', color: '#7ab6c5' },
+  { id: 'ancient', name: 'Ancient', code: 'AN', color: '#80ad92' },
+  { id: 'inferno', name: 'Inferno', code: 'IN', color: '#c98b76' },
+  { id: 'anubis', name: 'Anubis', code: 'AB', color: '#b9a472' },
+  { id: 'cache', name: 'Cache', code: 'CH', color: '#9aa681' },
 ] as const;
-export const categories = [
-  { id: 'smoke', name: 'Смоки', note: 'Закрывай обзор. Открывай возможности.', utility: true },
-  { id: 'he', name: 'HE-гранаты', note: 'Точный урон в нужный момент', utility: true },
-  { id: 'flash', name: 'Флешки', note: 'Подготовь выход своей команды', utility: true },
-  { id: 'molotov', name: 'Молотовы', note: 'Освободи позицию для атаки', utility: true },
-  { id: 'position', name: 'Позиции', note: 'A, B, mid, con, short и другие', utility: false },
-  { id: 'tactic', name: 'Тактики', note: 'От первого шага до плэнта', utility: false },
-  { id: 'tip', name: 'Полезные фишки', note: 'Детали, которые решают раунд', utility: false },
-] as const;
+const mapIdSchema = z.enum(['dust2', 'mirage', 'nuke', 'ancient', 'inferno', 'anubis', 'cache']);
+export type MapId = z.infer<typeof mapIdSchema>;
+export type CategoryKind = 'utility' | 'note' | 'lineup';
+export type Category = { id: string; name: string; kind: CategoryKind; mapId?: MapId };
+export const categories: Category[] = [
+  { id: 'smoke', name: 'Смоки', kind: 'utility' },
+  { id: 'he', name: 'HE-гранаты', kind: 'utility' },
+  { id: 'flash', name: 'Флешки', kind: 'utility' },
+  { id: 'molotov', name: 'Молотовы', kind: 'utility' },
+  { id: 'lineup', name: 'Лайнапы', kind: 'lineup' },
+  { id: 'position', name: 'Позиции', kind: 'note' },
+  { id: 'tactic', name: 'Тактики', kind: 'note' },
+  { id: 'tip', name: 'Полезные фишки', kind: 'note' },
+];
 export const defaultThrows = [
   'Left click',
   'Right click',
@@ -64,6 +33,12 @@ export const defaultThrows = [
   'Run + jumpthrow',
   'Ctrl + left click',
 ];
+export const languages = ['ru', 'en', 'pt'] as const;
+export const themes = ['dark-blue', 'dark', 'dark-red', 'dark-green'] as const;
+export type Language = (typeof languages)[number];
+export type Theme = (typeof themes)[number];
+export const settingsSchema = z.object({ language: z.enum(languages), theme: z.enum(themes) });
+export const defaultSettings = () => ({ language: 'ru' as Language, theme: 'dark-blue' as Theme });
 const shortText = z.string().trim().min(1).max(200);
 export const imageSchema = z.object({
   id: z.string().uuid(),
@@ -73,59 +48,180 @@ export const imageSchema = z.object({
     .max(12 * 1024 * 1024)
     .regex(/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+=*$/),
 });
-export const entrySchema = z
-  .object({
-    id: z.string().uuid(),
-    mapId: z.enum(['dust2', 'mirage', 'nuke', 'ancient', 'inferno', 'anubis', 'cache']),
-    categoryId: z.enum(['smoke', 'he', 'flash', 'molotov', 'position', 'tactic', 'tip']),
-    title: shortText,
-    from: z.string().trim().max(200),
-    to: z.string().trim().max(200),
-    throwType: z.string().trim().max(200),
-    markdown: z.string().max(100000),
-    images: z.array(imageSchema).max(30),
-    createdAt: z.string().datetime(),
-    updatedAt: z.string().datetime(),
-  })
-  .superRefine((entry, ctx) => {
-    if (
-      categories.find((c) => c.id === entry.categoryId)?.utility &&
-      (!entry.from || !entry.to || !entry.throwType)
-    ) {
-      ctx.addIssue({ code: 'custom', message: 'Укажите откуда, куда и способ броска' });
-    }
-  });
-export const commandSchema = z.object({
+const entryBase = z.object({
+  id: z.string().uuid(),
+  mapId: mapIdSchema,
+  categoryId: z.enum(['smoke', 'he', 'flash', 'molotov', 'position', 'tactic', 'tip']),
+  title: shortText,
+  from: z.string().trim().max(200),
+  to: z.string().trim().max(200),
+  throwType: z.string().trim().max(200),
+  markdown: z.string().max(100000),
+  images: z.array(imageSchema).max(30),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+export const lineupSchema = z.object({
+  id: z.string().uuid(),
+  to: shortText,
+  throwType: shortText,
+  aim: imageSchema.nullable(),
+  result: imageSchema.nullable(),
+});
+export const customCategorySchema = z.object({
+  id: z.string().uuid(),
+  mapId: mapIdSchema,
+  name: shortText,
+  kind: z.enum(['utility', 'note', 'lineup']),
+});
+export const entrySchema = entryBase.extend({
+  categoryId: z.union([
+    z.enum(['smoke', 'he', 'flash', 'molotov', 'position', 'tactic', 'tip', 'lineup']),
+    z.string().uuid(),
+  ]),
+  tags: z.array(z.string().trim().min(1).max(40)).max(20),
+  pinned: z.boolean(),
+  lineups: z.array(lineupSchema).max(20),
+});
+const legacyCommand = z.object({
   id: z.string().uuid(),
   title: shortText,
   command: z.string().trim().min(1).max(10000),
 });
+export const commandSchema = legacyCommand.extend({ pinned: z.boolean() });
+export const crosshairSchema = z.object({
+  id: z.string().uuid(),
+  code: z
+    .string()
+    .trim()
+    .regex(/^CSGO(?:-[A-Za-z0-9]{5}){5}$/),
+  image: imageSchema,
+  pinned: z.boolean(),
+  updatedAt: z.string().datetime(),
+});
 export const databaseSchema = z
   .object({
-    version: z.literal(1),
+    version: z.literal(2),
     entries: z.array(entrySchema).max(10000),
     commands: z.array(commandSchema).max(10000),
     customThrows: z.array(shortText).max(100),
+    customCategories: z.array(customCategorySchema).max(200),
+    crosshairs: z.array(crosshairSchema).max(1000),
+    settings: settingsSchema,
   })
   .superRefine((db, ctx) => {
-    const ids = [...db.entries, ...db.commands].map((item) => item.id);
-    if (new Set(ids).size !== ids.length)
-      ctx.addIssue({ code: 'custom', message: 'Повторяющиеся идентификаторы' });
+    const fail = (message: string) => ctx.addIssue({ code: 'custom', message });
+    const ids = [...db.entries, ...db.commands, ...db.crosshairs, ...db.customCategories].map(
+      (i) => i.id,
+    );
+    if (new Set(ids).size !== ids.length) fail('Duplicate IDs');
+    const categoryNames = db.customCategories.map(
+      (c) => `${c.mapId}:${c.name.toLocaleLowerCase()}`,
+    );
+    if (new Set(categoryNames).size !== categoryNames.length) fail('Duplicate category names');
+    for (const entry of db.entries) {
+      const category =
+        categories.find((c) => c.id === entry.categoryId) ??
+        db.customCategories.find((c) => c.id === entry.categoryId && c.mapId === entry.mapId);
+      if (!category) {
+        fail('Unknown category');
+        continue;
+      }
+      if (category.kind === 'utility' && (!entry.from || !entry.to || !entry.throwType))
+        fail('Missing throw fields');
+      if (
+        category.kind === 'lineup' &&
+        (!entry.from || entry.lineups.length === 0 || entry.images.length > 1)
+      )
+        fail('Invalid lineup');
+      if (category.kind !== 'lineup' && entry.lineups.length)
+        fail('Lineup groups outside a lineup');
+      if (entryShotCount(entry) > 41) fail('Too many screenshots');
+      const shotIds = [
+        ...entry.images,
+        ...entry.lineups.flatMap((l) => [l.aim, l.result].filter(Boolean)),
+      ].map((s) => s!.id);
+      if (new Set(shotIds).size !== shotIds.length) fail('Duplicate screenshot IDs');
+      if (new Set(entry.lineups.map((l) => l.id)).size !== entry.lineups.length)
+        fail('Duplicate lineup IDs');
+      if (new Set(entry.tags.map((t) => t.toLocaleLowerCase())).size !== entry.tags.length)
+        fail('Duplicate tags');
+    }
   });
+const legacySchema = z.object({
+  version: z.literal(1),
+  entries: z.array(entryBase).max(10000),
+  commands: z.array(legacyCommand).max(10000),
+  customThrows: z.array(shortText).max(100),
+});
 export type Entry = z.infer<typeof entrySchema>;
 export type Shot = z.infer<typeof imageSchema>;
+export type Lineup = z.infer<typeof lineupSchema>;
 export type Command = z.infer<typeof commandSchema>;
+export type Crosshair = z.infer<typeof crosshairSchema>;
+export type CustomCategory = z.infer<typeof customCategorySchema>;
+export type Settings = z.infer<typeof settingsSchema>;
 export type Database = z.infer<typeof databaseSchema>;
 export const emptyDatabase = (): Database => ({
-  version: 1,
+  version: 2,
   entries: [],
   commands: [],
   customThrows: [],
+  customCategories: [],
+  crosshairs: [],
+  settings: defaultSettings(),
 });
 export const MAX_DATABASE_BYTES = 100 * 1024 * 1024;
 export function parseDatabase(input: unknown): Database {
-  const result = databaseSchema.safeParse(input);
-  if (!result.success)
-    throw new Error('Некорректные данные справочника: ' + result.error.issues[0].message);
+  let candidate = input;
+  if (typeof input === 'object' && input !== null && 'version' in input && input.version === 1) {
+    const old = legacySchema.safeParse(input);
+    if (!old.success) throw new Error('ERR_INVALID_DATA');
+    candidate = {
+      ...emptyDatabase(),
+      entries: old.data.entries.map((e) => ({ ...e, tags: [], pinned: false, lineups: [] })),
+      commands: old.data.commands.map((c) => ({ ...c, pinned: false })),
+      customThrows: old.data.customThrows,
+    };
+  }
+  const result = databaseSchema.safeParse(candidate);
+  if (!result.success) throw new Error('ERR_INVALID_DATA');
   return result.data;
+}
+export function getCategories(db: Pick<Database, 'customCategories'>, mapId?: string): Category[] {
+  return [...categories, ...db.customCategories.filter((c) => c.mapId === mapId)];
+}
+export function entryShotCount(entry: Pick<Entry, 'images' | 'lineups'>) {
+  return (
+    entry.images.length +
+    entry.lineups.reduce((sum, l) => sum + Number(!!l.aim) + Number(!!l.result), 0)
+  );
+}
+export function sortPinned<T extends { pinned: boolean; updatedAt?: string }>(items: T[]): T[] {
+  return [...items].sort(
+    (a, b) =>
+      Number(b.pinned) - Number(a.pinned) || (b.updatedAt ?? '').localeCompare(a.updatedAt ?? ''),
+  );
+}
+export function newLineup(): Lineup {
+  return { id: crypto.randomUUID(), to: '', throwType: '', aim: null, result: null };
+}
+export function newEntry(mapId: MapId, categoryId: string, kind: CategoryKind): Entry {
+  const now = new Date().toISOString();
+  return {
+    id: crypto.randomUUID(),
+    mapId,
+    categoryId,
+    title: '',
+    from: '',
+    to: '',
+    throwType: '',
+    markdown: '',
+    images: [],
+    tags: [],
+    pinned: false,
+    lineups: kind === 'lineup' ? [newLineup()] : [],
+    createdAt: now,
+    updatedAt: now,
+  };
 }
