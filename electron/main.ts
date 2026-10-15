@@ -7,6 +7,8 @@ import { parseDatabase, type Language, type Settings } from '../src/model';
 import { translator } from '../src/messages';
 import { REPOSITORY } from '../src/app-info';
 import { themeLogos } from '../src/assets';
+import { exportMaterial, importMaterial, parseMaterialTransfer } from '../src/material-transfer';
+import { maps } from '../src/model';
 
 let window: BrowserWindow;
 const testData = !app.isPackaged && process.env.CS2_TEST_DATA_DIR;
@@ -110,6 +112,52 @@ else {
       loaded = true;
       applySettings(data.settings);
       return data;
+    });
+    handle('material:export', async (id: unknown) => {
+      if (!loaded || typeof id !== 'string') throw new Error('ERR_MATERIAL_FILE');
+      await queue;
+      const transfer = exportMaterial(await readDatabase(file), id);
+      const result = await dialog.showSaveDialog(window, {
+        defaultPath: `cs2-${transfer.entry.mapId}-${transfer.entry.id.slice(0, 8)}.cs2material`,
+        filters: [{ name: translator(language)('materialFile'), extensions: ['cs2material'] }],
+      });
+      if (result.canceled || !result.filePath) return false;
+      await writeFile(result.filePath, JSON.stringify(transfer), 'utf8');
+      return true;
+    });
+    handle('material:import', async () => {
+      if (!loaded) throw new Error('ERR_READ');
+      const result = await dialog.showOpenDialog(window, {
+        properties: ['openFile'],
+        filters: [{ name: translator(language)('materialFile'), extensions: ['cs2material'] }],
+      });
+      if (result.canceled || !result.filePaths[0]) return null;
+      let transfer;
+      try {
+        transfer = parseMaterialTransfer(JSON.parse(await readFile(result.filePaths[0], 'utf8')));
+      } catch {
+        throw new Error('ERR_MATERIAL_FILE');
+      }
+      const t = translator(language);
+      const answer = await dialog.showMessageBox(window, {
+        type: 'question',
+        title: t('importMaterial'),
+        message: t('importMaterialQuestion', {
+          title: transfer.entry.title,
+          map: maps.find((m) => m.id === transfer.entry.mapId)!.name,
+        }),
+        buttons: [t('cancel'), t('add')],
+        defaultId: 1,
+        cancelId: 0,
+      });
+      if (answer.response !== 1) return null;
+      const next = queue.then(async () => {
+        const merged = importMaterial(await readDatabase(file), transfer);
+        await writeDatabase(file, merged.data);
+        return merged;
+      });
+      queue = next.catch(() => {});
+      return next;
     });
     handle('clipboard:write', (text: unknown) => {
       if (typeof text !== 'string' || text.length > 10000) throw new Error('ERR_INVALID_DATA');

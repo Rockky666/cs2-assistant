@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowRight, Edit3, ImageIcon, Pin, Trash2 } from 'lucide-react';
+import { ArrowRight, Edit3, ImageIcon, Pin, Trash2, Share2 } from 'lucide-react';
 import { type Category, type Entry, type MapId, type Shot, maps, entryShotCount } from './model';
 import { useI18n } from './i18n';
 import { categoryName } from './messages';
@@ -15,6 +15,7 @@ export function MaterialCards({
   remove,
   pin,
   tag,
+  share,
 }: {
   entries: Entry[];
   categories: Category[];
@@ -24,6 +25,7 @@ export function MaterialCards({
   remove: (entry: Entry) => void;
   pin: (entry: Entry) => void;
   tag: (tag: string) => void;
+  share: (entry: Entry) => void;
 }) {
   const { t } = useI18n();
   return (
@@ -91,6 +93,15 @@ export function MaterialCards({
               </div>
             )}
             <div className="card-actions">
+              <button
+                className="icon-button"
+                disabled={busy}
+                aria-label={`${t('shareMaterial')} ${entry.title}`}
+                title={t('shareMaterial')}
+                onClick={() => share(entry)}
+              >
+                <Share2 size={17} />
+              </button>
               <PinButton
                 pinned={entry.pinned}
                 name={entry.title}
@@ -128,6 +139,7 @@ export function MaterialDetail({
   remove,
   pin,
   enlarge,
+  share,
 }: {
   entry: Entry;
   category: Category;
@@ -136,6 +148,7 @@ export function MaterialDetail({
   remove: () => void;
   pin: () => void;
   enlarge: (shot: Lightbox) => void;
+  share: () => void;
 }) {
   const { t, language } = useI18n();
   const labels = [t('standing'), t('aiming'), t('result')];
@@ -191,6 +204,10 @@ export function MaterialDetail({
           </div>
         </div>
         <div className="button-row">
+          <button className="secondary" disabled={busy} onClick={share}>
+            <Share2 size={17} />
+            {t('shareMaterial')}
+          </button>
           <PinButton name={entry.title} pinned={entry.pinned} disabled={busy} toggle={pin} />
           <button className="secondary" onClick={edit}>
             <Edit3 size={17} />

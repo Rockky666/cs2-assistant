@@ -5,6 +5,8 @@ export interface StorageBridge {
   save(data: Database): Promise<Database>;
   exportBackup(): Promise<boolean>;
   importBackup(): Promise<Database | null>;
+  exportMaterial(id: string): Promise<boolean>;
+  importMaterial(): Promise<{ data: Database; entryId: string } | null>;
   copy(text: string): Promise<void>;
   openRepository(): Promise<void>;
 }
@@ -26,6 +28,12 @@ export const storage: StorageBridge = window.desktop ?? {
     window.open(REPOSITORY, '_blank', 'noopener,noreferrer');
   },
   exportBackup: async () => {
+    throw new Error('ERR_PREVIEW');
+  },
+  exportMaterial: async () => {
+    throw new Error('ERR_PREVIEW');
+  },
+  importMaterial: async () => {
     throw new Error('ERR_PREVIEW');
   },
   importBackup: async () => {

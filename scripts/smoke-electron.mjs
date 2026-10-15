@@ -4,6 +4,7 @@ import { mkdtemp, readFile, writeFile, mkdir, rm } from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import { checkV03 } from './smoke-v03.mjs';
+import { checkTransfer } from './smoke-transfer.mjs';
 
 const dir = await mkdtemp(path.join(os.tmpdir(), 'cs2-desktop-'));
 const artifacts = path.resolve('output/playwright');
@@ -291,6 +292,7 @@ try {
   );
 
   await checkV03({ page, db, upload, artifacts });
+  await checkTransfer({ app, page, db, dir });
   const backup = path.join(dir, 'export.json');
   await app.evaluate(({ dialog }, file) => {
     dialog.showSaveDialog = async () => ({ canceled: false, filePath: file });

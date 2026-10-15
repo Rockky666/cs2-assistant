@@ -360,9 +360,44 @@ export default function App() {
       .then(() => setToast(t('copied')))
       .catch(setError);
   }
+  async function transferMaterial(id?: string) {
+    if (writing.current || (dirty && !window.confirm(t('unsaved')))) return;
+    writing.current = true;
+    setBusy(true);
+    setError(null);
+    let imported: Entry | undefined;
+    try {
+      if (id) {
+        if (await storage.exportMaterial(id)) setToast(t('materialExported'));
+      } else {
+        const result = await storage.importMaterial();
+        if (result) {
+          apply(result.data);
+          imported = result.data.entries.find((e) => e.id === result.entryId);
+          setToast(t('materialImported'));
+        }
+      }
+    } catch (err) {
+      setError(err);
+    } finally {
+      writing.current = false;
+      setBusy(false);
+    }
+    if (imported)
+      navigate(
+        {
+          page: 'detail',
+          mapId: imported.mapId,
+          categoryId: imported.categoryId,
+          entryId: imported.id,
+        },
+        true,
+      );
+  }
   function cards(items: Entry[]) {
     return (
       <MaterialCards
+        share={(entry) => void transferMaterial(entry.id)}
         entries={items}
         categories={[...categories, ...db.customCategories]}
         busy={busy}
@@ -652,6 +687,7 @@ export default function App() {
     if (route.page === 'detail' && selected && category)
       return (
         <MaterialDetail
+          share={() => void transferMaterial(selected!.id)}
           entry={selected}
           category={category}
           busy={busy}
@@ -867,7 +903,7 @@ export default function App() {
               <span>
                 CS2<span className="brand-subtitle">ASSISTANT</span>
               </span>
-              <span className="version">03</span>
+              <span className="version">04</span>
             </button>
             <div className="nav-caption">{t('yourGuide')}</div>
             <nav aria-label={t('navigation')}>
@@ -886,6 +922,16 @@ export default function App() {
               ))}
             </nav>
             <div className="sidebar-bottom">
+              <button
+                className="nav-item"
+                disabled={busy || loading || !!loadError}
+                aria-label={t('importMaterial')}
+                title={t('importMaterial')}
+                onClick={() => void transferMaterial()}
+              >
+                <Upload size={18} />
+                <span>{t('importMaterial')}</span>
+              </button>
               <div className="library-status">
                 <span className="status-dot" />
                 <span>

@@ -158,6 +158,7 @@ svg {
   min-height: 100vh;
 }
 .sidebar {
+  overflow-y: auto;
   width: 252px;
   position: fixed;
   inset: 0 auto 0 0;

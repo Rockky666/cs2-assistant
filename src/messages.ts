@@ -2,6 +2,29 @@ import type { Category, Language } from './model';
 
 // Every interface string has Russian, English and Portuguese translations.
 export const messages = {
+  shareMaterial: ['Поделиться', 'Share', 'Partilhar'],
+  importMaterial: ['Импорт материала', 'Import material', 'Importar material'],
+  materialFile: ['Материал CS2 Assistant', 'CS2 Assistant material', 'Material CS2 Assistant'],
+  materialExported: [
+    'Файл материала сохранён — отправь его другу.',
+    'Material file saved — send it to your friend.',
+    'Ficheiro guardado — envia-o ao teu amigo.',
+  ],
+  materialImported: [
+    'Материал добавлен в библиотеку.',
+    'Material added to your library.',
+    'Material adicionado à biblioteca.',
+  ],
+  importMaterialQuestion: [
+    'Добавить «{title}» ({map}) как новый материал? Существующие записи сохранятся. Повторный импорт создаст ещё одну копию.',
+    'Add “{title}” ({map}) as a new material? Existing entries are kept. Importing again creates another copy.',
+    'Adicionar «{title}» ({map}) como novo material? Os registos existentes são mantidos. Importar novamente cria outra cópia.',
+  ],
+  ERR_MATERIAL_FILE: [
+    'Не удалось прочитать материал. Выбери файл .cs2material, созданный кнопкой «Поделиться».',
+    'Could not read the material. Choose a .cs2material file created with Share.',
+    'Não foi possível ler o material. Escolhe um ficheiro .cs2material criado com Partilhar.',
+  ],
   guide: ['Руководство', 'Guide', 'Guia'],
   guideHint: [
     'Создавай темы и подтемы с описанием в Markdown.',
