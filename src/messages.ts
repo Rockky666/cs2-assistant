@@ -377,9 +377,9 @@ export const messages = {
   backupSaved: ['Резервная копия сохранена', 'Backup saved', 'Cópia guardada'],
   backupRestored: ['Библиотека восстановлена', 'Library restored', 'Biblioteca restaurada'],
   storageHint: [
-    'Предыдущая версия базы остаётся в library.json.bak. Общий размер библиотеки — до 100 МБ. Старые копии версии 0.1 читаются автоматически.',
-    'The previous database is kept in library.json.bak. Library size is limited to 100 MB. Backups from version 0.1 are read automatically.',
-    'A versão anterior fica em library.json.bak. A biblioteca está limitada a 100 MB. As cópias da versão 0.1 são lidas automaticamente.',
+    'Предыдущая версия базы остаётся в library.json.bak. Общий размер библиотеки не ограничен приложением. Старые копии версии 0.1 читаются автоматически.',
+    'The previous database is kept in library.json.bak. The app does not limit the total library size. Backups from version 0.1 are read automatically.',
+    'A versão anterior fica em library.json.bak. A aplicação não limita o tamanho total da biblioteca. As cópias da versão 0.1 são lidas automaticamente.',
   ],
   importTitle: ['Восстановление копии', 'Restore backup', 'Restaurar cópia'],
   importQuestion: [
@@ -413,11 +413,6 @@ export const messages = {
     'Не удалось прочитать базу. Исходный файл сохранён. Восстанови резервную копию.',
     'Could not read the database. The original file is intact. Restore a backup.',
     'Não foi possível ler a base de dados. O ficheiro original está intacto. Restaura uma cópia.',
-  ],
-  ERR_TOO_LARGE: [
-    'База превышает 100 МБ. Уменьши размер скриншотов.',
-    'The library exceeds 100 MB. Reduce screenshot sizes.',
-    'A biblioteca excede 100 MB. Reduz o tamanho das capturas.',
   ],
   ERR_PREVIEW: [
     'Эта функция доступна в приложении. Запусти npm start.',

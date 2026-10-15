@@ -189,7 +189,6 @@ export const emptyDatabase = (): Database => ({
   crosshairs: [],
   settings: defaultSettings(),
 });
-export const MAX_DATABASE_BYTES = 100 * 1024 * 1024;
 export function parseDatabase(input: unknown): Database {
   let candidate = input;
   if (typeof input === 'object' && input !== null && 'version' in input && input.version === 1) {

@@ -1,9 +1,9 @@
 import { app, BrowserWindow, dialog, ipcMain, clipboard, shell } from 'electron';
 import path from 'node:path';
-import { readFile, stat, writeFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import { mkdirSync } from 'node:fs';
 import { readDatabase, writeDatabase } from './storage';
-import { MAX_DATABASE_BYTES, parseDatabase, type Language, type Settings } from '../src/model';
+import { parseDatabase, type Language, type Settings } from '../src/model';
 import { translator } from '../src/messages';
 import { REPOSITORY } from '../src/app-info';
 import { themeLogos } from '../src/assets';
@@ -84,7 +84,6 @@ else {
       });
       if (result.canceled) return null;
       const source = result.filePaths[0];
-      if ((await stat(source)).size > MAX_DATABASE_BYTES) throw new Error('ERR_TOO_LARGE');
       let data;
       try {
         data = parseDatabase(JSON.parse(await readFile(source, 'utf8')));

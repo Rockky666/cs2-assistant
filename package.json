@@ -1,6 +1,6 @@
 {
   "name": "cs2-assistant",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "private": true,
   "type": "module",
   "description": "Локальный справочник Counter-Strike 2",
