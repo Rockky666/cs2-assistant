@@ -47,6 +47,7 @@ import { backgroundFor, themeLogos } from './assets';
 import { Guide } from './Guide';
 import { LinksContext, parseInternalLink } from './links';
 import { APP_VERSION } from './app-info';
+import { categoryTags, hasTag } from './tag-filter';
 
 type Route = {
   page:
@@ -66,6 +67,7 @@ type Route = {
   entryId?: string;
   topicId?: string;
   articleId?: string;
+  tag?: string;
 };
 function readRoute(): Route {
   try {
@@ -283,11 +285,15 @@ export default function App() {
   const category = mapCategories.find((c) => c.id === route.categoryId);
   const selected = db.entries.find((e) => e.id === route.entryId);
   const query = search.trim().replace(/^#/, '').toLocaleLowerCase();
+  const activeTag = typeof route.tag === 'string' ? route.tag : '';
+  const availableTags =
+    route.page === 'list' && map && category ? categoryTags(db.entries, map.id, category.id) : [];
   const entries = sortPinned(
     db.entries.filter(
       (e) =>
         (!map || e.mapId === map.id) &&
         (route.page !== 'list' || e.categoryId === category?.id) &&
+        (route.page !== 'list' || hasTag(e, activeTag)) &&
         (!query ||
           `${e.title} ${e.from} ${e.to} ${e.throwType} ${e.markdown} ${e.tags.join(' ')} ${e.lineups.map((l) => `${l.to} ${l.throwType}`).join(' ')} ${maps.find((m) => m.id === e.mapId)?.name}`
             .toLocaleLowerCase()
@@ -412,7 +418,9 @@ export default function App() {
         edit={edit}
         remove={(entry) => setDeleting({ id: entry.id, title: entry.title, kind: 'entry' })}
         pin={(entry) => pin('entries', entry.id)}
-        tag={setSearch}
+        tag={(value) =>
+          route.page === 'list' ? navigate({ ...route, tag: value }) : setSearch(value)
+        }
       />
     );
   }
@@ -671,13 +679,38 @@ export default function App() {
               {t(category.kind === 'utility' ? 'addUtility' : 'addMaterial')}
             </button>
           </div>
+          {(availableTags.length > 0 || activeTag) && (
+            <div className="tag-filter" role="group" aria-label={t('filterTags')}>
+              <span className="field-hint">{t('filterTags')}</span>
+              <div className="tags">
+                <button
+                  className={`tag ${!activeTag ? 'selected' : ''}`}
+                  aria-pressed={!activeTag}
+                  onClick={() => navigate({ ...route, tag: undefined })}
+                >
+                  {t('allTags')}
+                </button>
+                {availableTags.map((tag) => (
+                  <button
+                    key={tag.name.toLocaleLowerCase()}
+                    className={`tag ${tag.name.toLocaleLowerCase() === activeTag.toLocaleLowerCase() ? 'selected' : ''}`}
+                    aria-label={`${t('filterTags')}: #${tag.name}`}
+                    aria-pressed={tag.name.toLocaleLowerCase() === activeTag.toLocaleLowerCase()}
+                    onClick={() => navigate({ ...route, tag: tag.name })}
+                  >
+                    #{tag.name} <span>{tag.count}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="list-summary">
             <span>{t('materialsCount', { count: entries.length })}</span>
             <span>{t('sortHint')}</span>
           </div>
           {entries.length
             ? cards(entries)
-            : query
+            : query || activeTag
               ? empty('noResults', 'trySearch')
               : empty('collectionStart', `hint_${category.kind}`, () =>
                   edit(newEntry(map.id, category.id, category.kind)),
@@ -903,7 +936,7 @@ export default function App() {
               <span>
                 CS2<span className="brand-subtitle">ASSISTANT</span>
               </span>
-              <span className="version">04</span>
+              <span className="version">05</span>
             </button>
             <div className="nav-caption">{t('yourGuide')}</div>
             <nav aria-label={t('navigation')}>

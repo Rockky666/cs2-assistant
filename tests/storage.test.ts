@@ -15,6 +15,8 @@ const entry = (): Entry => ({
   to: 'Джангл',
   throwType: 'Jumpthrow',
   markdown: '**Тест**',
+  cover: null,
+  videoUrl: '',
   tags: [],
   pinned: false,
   lineups: [],

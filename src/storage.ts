@@ -1,5 +1,6 @@
 import { emptyDatabase, parseDatabase, type Database } from './model';
 import { REPOSITORY } from './app-info';
+import { youtubeVideo } from './video';
 export interface StorageBridge {
   load(): Promise<Database>;
   save(data: Database): Promise<Database>;
@@ -9,6 +10,7 @@ export interface StorageBridge {
   importMaterial(): Promise<{ data: Database; entryId: string } | null>;
   copy(text: string): Promise<void>;
   openRepository(): Promise<void>;
+  openVideo(url: string): Promise<void>;
 }
 declare global {
   interface Window {
@@ -26,6 +28,11 @@ export const storage: StorageBridge = window.desktop ?? {
   copy: async (text) => navigator.clipboard.writeText(text),
   openRepository: async () => {
     window.open(REPOSITORY, '_blank', 'noopener,noreferrer');
+  },
+  openVideo: async (url) => {
+    const video = youtubeVideo(url);
+    if (!video) throw new Error('ERR_VIDEO_URL');
+    window.open(video.watchUrl, '_blank', 'noopener,noreferrer');
   },
   exportBackup: async () => {
     throw new Error('ERR_PREVIEW');

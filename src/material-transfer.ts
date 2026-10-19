@@ -12,7 +12,7 @@ import {
 const transferSchema = z
   .object({
     format: z.literal('cs2-assistant-material'),
-    version: z.literal(1),
+    version: z.union([z.literal(1), z.literal(2)]),
     entry: entrySchema,
     category: customCategorySchema.nullable(),
   })
@@ -46,7 +46,7 @@ export function exportMaterial(db: Database, id: string): MaterialTransfer {
   if (!entry) throw new Error('ERR_MATERIAL_FILE');
   return parseMaterialTransfer({
     format: 'cs2-assistant-material',
-    version: 1,
+    version: 2,
     entry,
     category: db.customCategories.find((c) => c.id === entry.categoryId) ?? null,
   });

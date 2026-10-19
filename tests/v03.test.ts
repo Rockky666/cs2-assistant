@@ -14,7 +14,7 @@ test('v2 migration preserves IDs and content, replaces only the removed theme, a
   };
   const original = JSON.stringify(old);
   const migrated = parseDatabase(old);
-  assert.equal(migrated.version, 3);
+  assert.equal(migrated.version, 4);
   assert.equal(migrated.settings.theme, 'dark');
   assert.equal(migrated.settings.language, 'pt');
   assert.deepEqual(migrated.entries, [entry]);

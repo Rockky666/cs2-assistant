@@ -44,7 +44,7 @@ test('v1 files migrate without losing notes, images, order or commands; first wr
     const original = JSON.stringify(old);
     await writeFile(file, original);
     const migrated = await readDatabase(file);
-    assert.equal(migrated.version, 3);
+    assert.equal(migrated.version, 4);
     assert.deepEqual(migrated.entries[0].images, oldEntry.images);
     assert.equal(migrated.entries[0].pinned, false);
     assert.deepEqual(migrated.entries[0].tags, []);
@@ -53,7 +53,7 @@ test('v1 files migrate without losing notes, images, order or commands; first wr
     assert.equal(await readFile(file, 'utf8'), original);
     await writeDatabase(file, migrated);
     assert.equal(await readFile(file + '.bak', 'utf8'), original);
-    assert.equal((await readDatabase(file)).version, 3);
+    assert.equal((await readDatabase(file)).version, 4);
     assert.throws(
       () => parseDatabase({ ...old, entries: [{ ...oldEntry, from: '' }] }),
       /ERR_INVALID_DATA/,
@@ -128,7 +128,7 @@ test('category conversion preserves screenshot order and refuses conversions tha
     /ERR_IMAGES_LIMIT/,
   );
 });
-test('v3 backup round-trip preserves lineups, tags, pins, settings, custom categories and crosshairs', () => {
+test('v4 backup round-trip preserves lineups, tags, pins, settings, custom categories and crosshairs', () => {
   const custom: Category = {
     id: crypto.randomUUID(),
     name: 'Retakes',

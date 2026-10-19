@@ -18,6 +18,7 @@ import { ImageGalleryEditor, ImageSlot } from './ImageFields';
 import { useI18n } from './i18n';
 import { categoryName, errorText, translator, type MessageKey } from './messages';
 import { moveEntryCategory } from './editor-model';
+import { youtubeVideo } from './video';
 
 type Props = {
   entry: Entry;
@@ -221,6 +222,7 @@ export default function Editor({
     setError('');
     setBusy(true);
     try {
+      if (draft.videoUrl && !youtubeVideo(draft.videoUrl)) throw new Error('ERR_VIDEO_URL');
       const parsed = entrySchema.safeParse({
         ...draft,
         tags: tagsWithPending(),
@@ -416,6 +418,18 @@ export default function Editor({
             <span className="step">02</span>
             <h2>{t('screenshots')}</h2>
           </div>
+          {(lineup || draft.cover) && (
+            <div className="standing-slot">
+              <ImageSlot
+                shot={draft.cover}
+                label={t('cover')}
+                onChange={(shot) => update('cover', shot)}
+                busy={setReading}
+                error={report}
+              />
+              <p className="field-hint">{t('coverHint')}</p>
+            </div>
+          )}
           {lineup ? (
             <>
               <p className="muted">{t('lineupHint')}</p>
@@ -560,6 +574,22 @@ export default function Editor({
             <MarkdownInput value={draft.markdown} change={(value) => update('markdown', value)} />
           )}
           <p className="field-hint">{t('markdownHint')}</p>
+        </section>
+        <section className="form-panel">
+          <div className="panel-title">
+            <h2>{t('video')}</h2>
+          </div>
+          <label>
+            {t('videoUrl')}
+            <input
+              type="url"
+              maxLength={2048}
+              value={draft.videoUrl}
+              onChange={(e) => update('videoUrl', e.target.value)}
+              placeholder="https://www.youtube.com/watch?v=…"
+            />
+          </label>
+          <p className="field-hint">{t('videoUrlHint')}</p>
         </section>
         <div className="form-actions">
           <button className="secondary" type="button" onClick={cancel}>

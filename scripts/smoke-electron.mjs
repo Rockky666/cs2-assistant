@@ -5,6 +5,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { checkV03 } from './smoke-v03.mjs';
 import { checkTransfer } from './smoke-transfer.mjs';
+import { checkV05 } from './smoke-v05.mjs';
 
 const dir = await mkdtemp(path.join(os.tmpdir(), 'cs2-desktop-'));
 const artifacts = path.resolve('output/playwright');
@@ -93,7 +94,7 @@ try {
   await button('Просмотр').click();
   await page.getByRole('heading', { name: 'Проверка', exact: true }).waitFor();
   await saveMaterial('Смок в джангл');
-  assert.equal((await db()).version, 3);
+  assert.equal((await db()).version, 4);
   assert.equal(JSON.parse(await readFile(libraryFile + '.bak', 'utf8')).version, 1);
   assert.equal((await db()).entries[1].images[2].name, 'extra.jpg');
   assert.deepEqual((await db()).entries[1].tags, ['выход A']);
@@ -116,7 +117,7 @@ try {
   assert.equal(await page.locator('.entry-card h3').first().textContent(), 'Старая раскидка');
   await button('#выход A').click();
   assert.equal(await page.locator('.entry-card').count(), 1);
-  await button('Очистить поиск').click();
+  await button('Все теги').click();
   console.log('PASS: v1 migration, utility CRUD, tags, pins, screenshot order and throw overlays.');
 
   await goMirage();
@@ -293,6 +294,7 @@ try {
 
   await checkV03({ page, db, upload, artifacts });
   await checkTransfer({ app, page, db, dir });
+  await checkV05({ page, db, upload, artifacts });
   const backup = path.join(dir, 'export.json');
   await app.evaluate(({ dialog }, file) => {
     dialog.showSaveDialog = async () => ({ canceled: false, filePath: file });
@@ -331,7 +333,7 @@ try {
   await page.screenshot({ path: path.join(artifacts, 'desktop-compact.png'), fullPage: true });
   assert.deepEqual(errors, []);
   console.log(
-    'PASS: full v3 backup round-trip, corrupt import rejection, delete/cancel and compact layout.',
+    'PASS: full v4 backup round-trip, corrupt import rejection, delete/cancel and compact layout.',
   );
 } catch (error) {
   console.error(error);

@@ -8,4 +8,5 @@ contextBridge.exposeInMainWorld('desktop', {
   importMaterial: () => ipcRenderer.invoke('material:import'),
   copy: (text: string) => ipcRenderer.invoke('clipboard:write', text),
   openRepository: () => ipcRenderer.invoke('app:repository'),
+  openVideo: (url: string) => ipcRenderer.invoke('video:open', url),
 });

@@ -5,6 +5,7 @@ import { useI18n } from './i18n';
 import { categoryName } from './messages';
 import { categoryIcon, Markdown, PinButton, ShotVisual, type Lightbox } from './components';
 import { mapAssets, positionsFor } from './assets';
+import { VideoPlayer } from './VideoPlayer';
 
 export function MaterialCards({
   entries,
@@ -36,7 +37,7 @@ export function MaterialCards({
         const visual = cat.kind !== 'note';
         const thumb =
           cat.kind === 'lineup'
-            ? (entry.lineups.find((l) => l.result)?.result ?? entry.images[0])
+            ? (entry.cover ?? entry.lineups.find((l) => l.result)?.result ?? entry.images[0])
             : (entry.images[2] ?? entry.images[0]);
         return (
           <article
@@ -269,6 +270,7 @@ export function MaterialDetail({
           <Markdown>{entry.markdown}</Markdown>
         </section>
       )}
+      {entry.videoUrl && <VideoPlayer key={entry.id + entry.videoUrl} url={entry.videoUrl} />}
       <p className="field-hint">
         {t('updated', { date: new Date(entry.updatedAt).toLocaleString(language) })}
       </p>

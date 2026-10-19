@@ -9,8 +9,10 @@ import { REPOSITORY } from '../src/app-info';
 import { themeLogos } from '../src/assets';
 import { exportMaterial, importMaterial, parseMaterialTransfer } from '../src/material-transfer';
 import { maps } from '../src/model';
+import { youtubeVideo, VIDEO_REFERRER } from '../src/video';
 
 let window: BrowserWindow;
+app.setAppUserModelId('com.rockky.cs2assistant');
 const testData = !app.isPackaged && process.env.CS2_TEST_DATA_DIR;
 const dataDirectory = testData || path.join(app.getPath('appData'), 'CS2 Assistant');
 mkdirSync(dataDirectory, { recursive: true });
@@ -164,6 +166,11 @@ else {
       clipboard.writeText(text);
     });
     handle('app:repository', () => shell.openExternal(REPOSITORY));
+    handle('video:open', (url: unknown) => {
+      const video = typeof url === 'string' && youtubeVideo(url);
+      if (!video) throw new Error('ERR_VIDEO_URL');
+      return shell.openExternal(video.watchUrl);
+    });
     window = new BrowserWindow({
       width: 1360,
       height: 900,
@@ -180,6 +187,22 @@ else {
       },
     });
     window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+    // file:// does not send a Referer. Identify this app only for YouTube embed navigation.
+    // https://developers.google.com/youtube/terms/required-minimum-functionality#referer-format
+    window.webContents.session.webRequest.onBeforeSendHeaders(
+      { urls: ['https://www.youtube-nocookie.com/embed/*'] },
+      (details, callback) => {
+        if (
+          details.webContentsId === window.webContents.id &&
+          details.resourceType === 'subFrame'
+        ) {
+          for (const key of Object.keys(details.requestHeaders))
+            if (key.toLowerCase() === 'referer') delete details.requestHeaders[key];
+          details.requestHeaders.Referer = VIDEO_REFERRER;
+        }
+        callback({ requestHeaders: details.requestHeaders });
+      },
+    );
     window.webContents.on('will-navigate', (event) => event.preventDefault());
     window.webContents.on('will-prevent-unload', (event) => {
       const choice = dialog.showMessageBoxSync(window, {
@@ -191,8 +214,14 @@ else {
       });
       if (choice === 1) event.preventDefault();
     });
-    window.webContents.session.setPermissionRequestHandler((_webContents, _permission, callback) =>
-      callback(false),
+    window.webContents.session.setPermissionRequestHandler(
+      (contents, permission, callback, details) => {
+        callback(
+          contents === window.webContents &&
+            permission === 'fullscreen' &&
+            details.requestingUrl.startsWith('https://www.youtube-nocookie.com/embed/'),
+        );
+      },
     );
     window.loadFile(path.join(__dirname, '../dist/index.html'));
   });

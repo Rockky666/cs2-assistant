@@ -2160,3 +2160,28 @@ fieldset {
     grid-template-columns: 1fr;
   }
 }
+
+.tag-filter {
+  margin: 0 0 20px;
+}
+.tag-filter > .field-hint {
+  display: block;
+  margin-bottom: 10px;
+}
+.tag-filter .tag.selected {
+  background: var(--accent-solid);
+  color: var(--accent-ink);
+  border-color: var(--accent-line);
+}
+.tag-filter .tag span {
+  opacity: 0.8;
+}
+.video-player {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16/9;
+  min-height: 200px;
+  border: 0;
+  background: #000;
+  border-radius: 8px;
+}

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { youtubeVideo } from './video';
 
 export const maps = [
   { id: 'dust2', name: 'Dust 2', code: 'D2', color: '#ccac76' },
@@ -75,6 +76,13 @@ export const customCategorySchema = z.object({
   kind: z.enum(['utility', 'note', 'lineup']),
 });
 export const entrySchema = entryBase.extend({
+  cover: imageSchema.nullable().default(null),
+  videoUrl: z
+    .string()
+    .trim()
+    .max(2048)
+    .refine((value) => !value || !!youtubeVideo(value))
+    .default(''),
   categoryId: z.union([
     z.enum(['smoke', 'he', 'flash', 'molotov', 'position', 'tactic', 'tip', 'lineup']),
     z.string().uuid(),
@@ -108,7 +116,7 @@ export type GuideTopic = z.infer<typeof guideTopicSchema>;
 export type GuideArticle = z.infer<typeof guideArticleSchema>;
 export const databaseSchema = z
   .object({
-    version: z.literal(3),
+    version: z.literal(4),
     guideTopics: z.array(guideTopicSchema).max(200),
     guideArticles: z.array(guideArticleSchema).max(10000),
     entries: z.array(entrySchema).max(10000),
@@ -152,8 +160,9 @@ export const databaseSchema = z
         fail('Invalid lineup');
       if (category.kind !== 'lineup' && entry.lineups.length)
         fail('Lineup groups outside a lineup');
-      if (entryShotCount(entry) > 41) fail('Too many screenshots');
+      if (entryShotCount(entry) > 42) fail('Too many screenshots');
       const shotIds = [
+        ...(entry.cover ? [entry.cover] : []),
         ...entry.images,
         ...entry.lineups.flatMap((l) => [l.aim, l.result].filter(Boolean)),
       ].map((s) => s!.id);
@@ -179,7 +188,7 @@ export type CustomCategory = z.infer<typeof customCategorySchema>;
 export type Settings = z.infer<typeof settingsSchema>;
 export type Database = z.infer<typeof databaseSchema>;
 export const emptyDatabase = (): Database => ({
-  version: 3,
+  version: 4,
   guideTopics: [],
   guideArticles: [],
   entries: [],
@@ -206,7 +215,7 @@ export function parseDatabase(input: unknown): Database {
     const preferences = old.settings as Record<string, unknown> | undefined;
     candidate = {
       ...old,
-      version: 3,
+      version: 4,
       guideTopics: [],
       guideArticles: [],
       settings: {
@@ -215,6 +224,8 @@ export function parseDatabase(input: unknown): Database {
       },
     };
   }
+  if (typeof input === 'object' && input !== null && 'version' in input && input.version === 3)
+    candidate = { ...input, version: 4 };
   const result = databaseSchema.safeParse(candidate);
   if (!result.success) throw new Error('ERR_INVALID_DATA');
   return result.data;
@@ -222,9 +233,10 @@ export function parseDatabase(input: unknown): Database {
 export function getCategories(db: Pick<Database, 'customCategories'>, mapId?: string): Category[] {
   return [...categories, ...db.customCategories.filter((c) => c.mapId === mapId)];
 }
-export function entryShotCount(entry: Pick<Entry, 'images' | 'lineups'>) {
+export function entryShotCount(entry: Pick<Entry, 'images' | 'lineups'> & { cover?: Shot | null }) {
   return (
     entry.images.length +
+    Number(!!entry.cover) +
     entry.lineups.reduce((sum, l) => sum + Number(!!l.aim) + Number(!!l.result), 0)
   );
 }
@@ -248,6 +260,8 @@ export function newEntry(mapId: MapId, categoryId: string, kind: CategoryKind): 
     to: '',
     throwType: '',
     markdown: '',
+    cover: null,
+    videoUrl: '',
     images: [],
     tags: [],
     pinned: false,

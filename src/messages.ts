@@ -2,6 +2,33 @@ import type { Category, Language } from './model';
 
 // Every interface string has Russian, English and Portuguese translations.
 export const messages = {
+  filterTags: ['Теги категории', 'Category tags', 'Etiquetas da categoria'],
+  allTags: ['Все теги', 'All tags', 'Todas as etiquetas'],
+  cover: ['Обложка раскида', 'Setup cover', 'Capa da preparação'],
+  coverHint: [
+    'Необязательная отдельная картинка для карточки раскида. Скриншоты позиции и бросков сохраняются отдельно.',
+    'Optional cover for the setup card, separate from position and throw screenshots.',
+    'Capa opcional do cartão, separada das capturas de posição e lançamentos.',
+  ],
+  video: ['Видео', 'Video', 'Vídeo'],
+  videoPlayer: ['Видеоплеер YouTube', 'YouTube video player', 'Leitor de vídeo YouTube'],
+  videoUrl: ['Ссылка на видео YouTube', 'YouTube video link', 'Ligação de vídeo YouTube'],
+  videoUrlHint: [
+    'Необязательно. Поддерживаются обычные ссылки YouTube, youtu.be, Shorts и трансляции. Можно указать время начала в ссылке.',
+    'Optional. Supports YouTube, youtu.be, Shorts and live video links, including a start time.',
+    'Opcional. Aceita ligações YouTube, youtu.be, Shorts e transmissões, incluindo o tempo inicial.',
+  ],
+  videoPlaybackHint: [
+    'Для просмотра нужен интернет. Если автор запретил встраивание или видео недоступно, попробуй открыть его на YouTube.',
+    'Internet is required. If embedding is disabled or the video is unavailable, try opening it on YouTube.',
+    'É necessária ligação à Internet. Se a incorporação estiver desativada ou o vídeo indisponível, tenta abrir no YouTube.',
+  ],
+  openVideo: ['Открыть на YouTube', 'Open on YouTube', 'Abrir no YouTube'],
+  ERR_VIDEO_URL: [
+    'Вставь ссылку на отдельное видео YouTube или очисти поле.',
+    'Enter a link to a single YouTube video or clear the field.',
+    'Insere uma ligação para um vídeo YouTube ou limpa o campo.',
+  ],
   shareMaterial: ['Поделиться', 'Share', 'Partilhar'],
   importMaterial: ['Импорт материала', 'Import material', 'Importar material'],
   materialFile: ['Материал CS2 Assistant', 'CS2 Assistant material', 'Material CS2 Assistant'],
